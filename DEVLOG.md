@@ -114,3 +114,38 @@ The system prompt worked exactly as designed.
 - Write moa_pipeline.py - Mixture of Agents
 - Test all 5 models via API
 - Begin Week 3: Docker Desktop installation
+### Session 2 final update — April 4, 2026
+
+### Additional accomplishments
+- nlu_api.py written and tested - NISA's central routing brain
+- Intelligent model routing confirmed working:
+  - Security keywords route to RedSage 8B
+  - Reasoning/research keywords route to DeepSeek R1 32B
+  - General queries route to Qwen 3 32B
+- Two routing tests passed:
+  - "prompt injection attack" -> redsage, routing_reason: security
+  - "Gateway Experience Focus levels" -> deepseek-r1, routing_reason: reasoning
+- Gemma 3 27B downloaded successfully (16.87GB, vision capable)
+- Memory management understood: one 32B model at a time in 48GB
+  Gemma loads on demand when vision tasks needed
+- NLU API running on port 8081 via FastAPI + uvicorn
+- LM Studio local server confirmed on localhost:1234
+
+### Week 2 checklist status
+- [x] LM Studio installed with developer mode
+- [x] Qwen 3 32B MLX 4BIT downloaded
+- [x] DeepSeek R1 Distill 32B downloaded
+- [x] RedSage 8B downloaded
+- [x] Phi-4 14B downloaded
+- [x] Gemma 3 27B downloaded
+- [x] LM Studio local server enabled and tested
+- [x] First Python API call to Nisaba confirmed
+- [x] NLU API written with intelligent routing
+- [x] AIBOM created and committed
+- [x] DEVLOG established
+
+### Week 3 focus
+- Install Docker Desktop
+- Set up PostgreSQL, ChromaDB, Redis containers
+- Install Neo4j Desktop
+- Begin Week 4: voice pipeline
