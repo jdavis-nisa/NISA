@@ -72,3 +72,45 @@ The system prompt worked exactly as designed.
 - Write first Python API test
 
 ---
+---
+
+## Session 2 continued — April 4, 2026
+
+### What was built
+- DEVLOG.md established as build journal
+- New directory structure created: SECURITY, benchmarks, red_team,
+  observability, docs/case_studies
+- SECURITY/AIBOM.md created and pushed - supply chain documentation
+- DeepSeek R1 Distill Qwen 32B downloaded (18.78GB, bartowski Q4_K_S)
+- RedSage Qwen3 8B DPO downloaded (4.80GB)
+- Phi-4 14B downloaded (9.05GB, Q4_K_M)
+- Gemma 3 27B downloading (16.87GB, MLX 4BIT, vision capable)
+- LM Studio local server enabled on localhost:1234
+- All 4 models confirmed available via API
+- test_api.py written and executed successfully
+- First Python programmatic call to Nisaba confirmed working
+- pyaudio installed via portaudio dependency
+- Full Python stack verified: langchain, langgraph, chromadb, fastapi,
+  uvicorn, openai, mlx-lm, webrtcvad, sounddevice, spotipy, feedparser
+
+### Decisions made
+- bartowski Q4_K_S chosen for DeepSeek R1 over lmstudio-community
+  Q4_K_M - imatrix quantization preserves quality better
+- Gemma 3 27B MLX format chosen - native Apple Silicon, vision capable,
+  128k context window, 896x896 image resolution support
+- VS Code Python interpreter set to 3.11.15 to match pip packages
+
+### Problems encountered and solved
+- pyaudio build failed - missing portaudio.h
+  Solution: brew install portaudio first, then pip install pyaudio
+- em dash in git commit message caused dquote prompt
+  Solution: Control+C to escape, use plain hyphens in commit messages
+- VS Code using Python 3.14.3 instead of 3.11.15
+  Solution: Command+Shift+P, Python: Select Interpreter, choose 3.11.15
+
+### What's next
+- Wait for Gemma 3 27B download to complete
+- Write nlu_api.py - the central routing brain
+- Write moa_pipeline.py - Mixture of Agents
+- Test all 5 models via API
+- Begin Week 3: Docker Desktop installation
