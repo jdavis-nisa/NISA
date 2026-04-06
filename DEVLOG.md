@@ -149,3 +149,69 @@ The system prompt worked exactly as designed.
 - Set up PostgreSQL, ChromaDB, Redis containers
 - Install Neo4j Desktop
 - Begin Week 4: voice pipeline
+---
+
+## Session 3 — April 6, 2026
+
+### What was built
+- Docker Desktop v4.67.0 installed and running
+- All three database containers confirmed running after 39 hours:
+  - nisa_postgres (healthy) — port 5432
+  - nisa_redis (healthy) — port 6379
+  - nisa_chromadb (up) — port 8000
+- ChromaDB v2 API confirmed working
+- PostgreSQL Python connection confirmed (psycopg2-binary 2.9.11)
+- Full infrastructure stack verified end to end:
+  - LM Studio API port 1234 - 4 models
+  - NLU API port 8081 - routing confirmed
+  - PostgreSQL port 5432 - connected
+  - ChromaDB port 8000 - heartbeat confirmed
+  - Redis port 6379 - healthy
+
+### Infrastructure stack complete
+All Phase 1 infrastructure is running. Ready for Week 4 voice pipeline.
+
+### What's next
+- Install Neo4j Desktop
+- Install Whisper.cpp
+- Install Piper TTS
+- Write voice_pipeline.py
+- THE MOMENT: speak to Nisaba, hear her respond
+### Known issue — bookmarked
+Voice pipeline TTS audio conflict on macOS:
+- Whisper STT working perfectly
+- NLU routing working perfectly  
+- Piper TTS generates audio but PortAudio conflicts with
+  simultaneous input stream
+- Fix: implement proper audio stream pause/resume around
+  TTS playback, or use separate audio process
+- Priority: Medium — text responses work, voice output cosmetic
+---
+
+## Session 3 continued — April 6, 2026
+
+### What was built
+- Security Docker containers deployed:
+  - nisa_nmap (Nmap 7.98, aarch64) - running
+  - nisa_zap (OWASP ZAP stable) - running
+- Security API written (src/security/security_api.py)
+  - FastAPI on port 8082
+  - JIT token system - UUID tokens expire in 60 seconds
+  - Nmap scan endpoint with safety checks
+  - Container status endpoint
+- First programmatic Nmap scan via API confirmed working
+- Structured JSON response with ports and summary
+
+### Decisions made
+- Kali Linux container deferred - too large, not needed yet
+- VS Code integrated terminal unreliable for file writes and audio
+  Rule: all Terminal commands in Mac Terminal app only
+- Security API uses host networking for Nmap to scan local network
+- JIT tokens are one-time use AND time-limited - double protection
+
+### What's next
+- Write audit_trail.py - cryptographic logging
+- Write PyRIT adversarial harness
+- Build OWASP evaluation suite
+- Write moa_pipeline.py
+- Wire ChromaDB into LangGraph
