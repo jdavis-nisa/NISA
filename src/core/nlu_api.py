@@ -6,6 +6,7 @@ import uvicorn
 import sys
 sys.path.insert(0, '/Users/joshuadavis/NISA/src/core')
 from memory import store_exchange, recall_relevant, format_memory_context
+from moa_pipeline import run_moa, should_use_moa
 
 app = FastAPI(title="NISA NLU API", version="0.1.0")
 
@@ -95,6 +96,7 @@ class ChatResponse(BaseModel):
     response: str
     model_used: str
     routing_reason: str
+    moa_used: bool = False
 
 @app.get("/health")
 def health_check():
@@ -113,22 +115,30 @@ def chat(request: ChatRequest):
         memories = recall_relevant(request.message, n_results=3)
         memory_context = format_memory_context(memories)
         
-        # Build system prompt with memory context
-        system_prompt = NISABA_SYSTEM_PROMPT
-        if memory_context:
-            system_prompt += memory_context
+        # Determine if MoA should be used
+        use_moa = should_use_moa(request.message) and reason not in ["security"]
         
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.message}
-            ],
-            temperature=request.temperature,
-            max_tokens=request.max_tokens
-        )
-        
-        response_text = completion.choices[0].message.content
+        if use_moa:
+            moa_result = run_moa(request.message)
+            response_text = moa_result["response"]
+            model = f"MoA:{moa_result['reasoning_model']}+{moa_result['synthesis_model']}"
+            reason = f"moa_{moa_result['mode']}"
+        else:
+            # Build system prompt with memory context
+            system_prompt = NISABA_SYSTEM_PROMPT
+            if memory_context:
+                system_prompt += memory_context
+            
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": request.message}
+                ],
+                temperature=request.temperature,
+                max_tokens=request.max_tokens
+            )
+            response_text = completion.choices[0].message.content
         
         # Store this exchange in memory
         try:
@@ -144,7 +154,8 @@ def chat(request: ChatRequest):
         return ChatResponse(
             response=response_text,
             model_used=model,
-            routing_reason=reason
+            routing_reason=reason,
+            moa_used=use_moa if not request.force_model else False
         )
     
     except Exception as e:
