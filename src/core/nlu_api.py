@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from openai import OpenAI
 from typing import Optional
 import uvicorn
+import sys
+sys.path.insert(0, '/Users/joshuadavis/NISA/src/core')
+from memory import store_exchange, recall_relevant, format_memory_context
 
 app = FastAPI(title="NISA NLU API", version="0.1.0")
 
@@ -106,18 +109,40 @@ def chat(request: ChatRequest):
         else:
             model, reason = select_model(request.message)
         
+        # Recall relevant memories
+        memories = recall_relevant(request.message, n_results=3)
+        memory_context = format_memory_context(memories)
+        
+        # Build system prompt with memory context
+        system_prompt = NISABA_SYSTEM_PROMPT
+        if memory_context:
+            system_prompt += memory_context
+        
         completion = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": NISABA_SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.message}
             ],
             temperature=request.temperature,
             max_tokens=request.max_tokens
         )
         
+        response_text = completion.choices[0].message.content
+        
+        # Store this exchange in memory
+        try:
+            store_exchange(
+                user_message=request.message,
+                nisaba_response=response_text,
+                model_used=model,
+                routing_reason=reason
+            )
+        except Exception as mem_err:
+            print(f"[Memory] Store error: {mem_err}")
+        
         return ChatResponse(
-            response=completion.choices[0].message.content,
+            response=response_text,
             model_used=model,
             routing_reason=reason
         )
