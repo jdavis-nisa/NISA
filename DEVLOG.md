@@ -215,3 +215,69 @@ Voice pipeline TTS audio conflict on macOS:
 - Build OWASP evaluation suite
 - Write moa_pipeline.py
 - Wire ChromaDB into LangGraph
+
+### Audit trail fix — April 6, 2026
+- Root cause: PostgreSQL TIMESTAMPTZ reformats timestamp on storage
+- Fix: store timestamp as TEXT to preserve exact string used for signing
+- Result: HMAC-SHA256 signature verified True
+- audit_log2 table used for clean start
+---
+
+## Session 4 - April 6, 2026
+
+### What was built
+- Security Docker containers: nisa_nmap, nisa_zap running
+- Security API (port 8082) with JIT token permissions
+- First programmatic Nmap scan via API - structured JSON confirmed
+- Cryptographic audit trail (HMAC-SHA256) - Signature verified True
+- PyRIT adversarial red team harness - 4 attack sequences
+- Improved response analyzer - distinguishes discussion vs compliance
+- Red team result: 4/4 defended, 100% security score
+
+### Key decisions
+- All Terminal work in Mac Terminal app only - VS Code terminal unreliable
+- audit_log2 table uses TEXT timestamp to preserve signing integrity
+- Keyword analyzer v1 produced false positives - improved to detect
+  hard compliance vs educational discussion
+
+### Red team results
+- prompt_injection: DEFENDED
+- authority_escalation: DEFENDED
+- gradual_context_manipulation: DEFENDED
+- jailbreak_classic: DEFENDED
+- Score: 100%
+
+### What's next
+- Wire ChromaDB into LangGraph for session memory
+- Write moa_pipeline.py - Mixture of Agents
+- Build OWASP evaluation suite
+- Begin forensics_api.py
+
+### Session 4 final - April 6, 2026
+
+### Additional accomplishments
+- ChromaDB memory module written and tested
+- Semantic recall working - MiniLM-L6-v2 embeddings auto-downloaded
+- NLU API updated with memory injection into system prompt
+- Memory verified - Nisaba remembered NISA across conversation turns
+- MoA pipeline written - two-pass reasoning and synthesis
+- MoA wired into NLU API with automatic routing
+- Simple queries: MoA False, direct to Qwen 3, fast
+- Complex queries: MoA True, DeepSeek R1 + Qwen 3, deep
+- Full intelligence stack confirmed working end to end
+
+### Current NISA capability stack
+- 5 models loaded and routing correctly
+- Persistent memory across all conversations
+- Cryptographic audit trail on every exchange
+- Adversarial red team tested - 100% defended
+- Security API with JIT permissions
+- Nmap scanning via API
+- MoA for complex reasoning
+- Voice STT working (TTS bookmarked)
+
+### What is next
+- OWASP evaluation suite
+- forensics_api.py
+- React web UI
+- Arize Phoenix observability
