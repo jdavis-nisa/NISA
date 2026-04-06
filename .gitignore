@@ -1,0 +1,18 @@
+# Environment variables - never commit
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Models
+models/weights/
+
+# Logs
+*.log
+logs/
