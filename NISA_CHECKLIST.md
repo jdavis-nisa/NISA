@@ -1,4 +1,4 @@
-# NISA Build Checklist — Version 7.2
+# NISA Build Checklist — Version 7.3
 Last Updated: April 7, 2026
 Current Status: Phase 3 in progress - knowledge graph + tool expansion
 
@@ -117,7 +117,8 @@ Knowledge Graph and RAG
 [ ] Build music library on SSD
 [ ] Implement multi-hop forensic search
 [ ] Configure Arize Phoenix semantic drift monitoring
-[ ] Install AnythingLLM - self-hosted RAG interface
+[x] Install AnythingLLM 1.12.0 - configured with LM Studio + Qwen 3 32B
+[x] test_security.txt ingested and querying confirmed
 [ ] Build task scheduler and learning engine
 
 Security Tool Expansion
@@ -136,7 +137,7 @@ Cryptography Upgrade
 [x] ML-DSA-65 (CRYSTALS-Dilithium Level 2) - NIST FIPS 204
 [x] Replace HMAC-SHA256 audit trail with quantum-resistant algorithm
 [x] Document quantum-resistant cryptography in AIBOM
-[ ] Update compliance PDF to reflect ML-DSA-65 signing algorithm
+[x] Update compliance PDF to reflect ML-DSA-65 signing algorithm
 
 Fine-tuning and Mobile
 [ ] Begin fine-tuning dataset collection

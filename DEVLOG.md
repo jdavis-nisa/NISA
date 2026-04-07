@@ -609,3 +609,48 @@ Voice pipeline TTS audio conflict on macOS:
 - Voice activation button in Chat UI
 - Update compliance PDF to show ML-DSA-65
 - Populate knowledge library with real documents
+
+### Session 7 final - April 7, 2026
+
+#### AnythingLLM RAG Interface
+- AnythingLLM 1.12.0 installed and configured
+- Pointed at LM Studio qwen/qwen3-32b
+- Embedder set to text-embedding-nomic-embed-text-v1.5
+- test_security.txt ingested and querying confirmed
+- Document Q&A working: OWASP prompt injection query answered from document context
+
+#### Voice Activation Button
+- Mic button added to Chat UI (Mic/MicOff icons)
+- /voice endpoint added to NLU API
+- ffmpeg installed for audio conversion
+- Browser mic BOOKMARKED - Safari/Chrome localhost restrictions
+- Terminal voice pipeline working: python3.11 src/voice/voice_pipeline.py
+
+#### Compliance PDF Updated
+- ML-DSA-65 (CRYSTALS-Dilithium) shown in report header
+- Quantum Resistant: YES displayed in metadata table
+- Executive summary references ML-DSA-65 (NIST FIPS 204)
+- Footer updated to reflect post-quantum signing
+
+#### Phase 3 Status
+COMPLETE items:
+- SSD structured with 18 knowledge domains
+- GraphRAG knowledge pipeline - security domain indexed and querying
+- GraphRAG wired into NLU API - context-aware responses
+- Knowledge watcher - auto-ingestion every 5 minutes
+- tshark pcap analysis endpoint and UI tab
+- Burp Suite Community Edition installed
+- Suricata IDS API and UI - 49,494 rules, live alerts feed
+- ML-DSA-65 quantum-resistant audit trail - NIST FIPS 204
+- AnythingLLM document Q&A interface
+- Voice button in Chat UI
+- Compliance PDF updated with quantum crypto
+
+REMAINING:
+- Populate knowledge library with real documents
+- Kali Linux container + Metasploit (bookmarked - Rosetta)
+- Browser voice mic (bookmarked)
+- Fine-tuning pipeline
+- React Native mobile app
+- Full NISA demo video
+- Tag v0.3.0
