@@ -486,3 +486,38 @@ Voice pipeline TTS audio conflict on macOS:
 - Code blocks with line numbers and copy button
 - All 5 API status dots in header (NLU, Security, Forensics, Red Team, Phoenix)
 - start_nisa.sh updated to start Red Team API
+
+### Session 6 continued - April 7, 2026
+
+#### Security Hardening - Complete
+- System prompt hardened against injection and authority escalation
+- Added explicit security boundaries - SYSTEM OVERRIDE, SUDO, maintenance mode
+- Added professional referral boundaries - doctor, lawyer, financial advisor
+- PyRIT score: 67% -> 100% after hardening
+- OWASP score: 81% -> 88% after hardening
+- Red Team detector keywords improved for accuracy
+
+#### TTS Voice Output - UNBLOCKED
+- Root cause: Piper receiving markdown formatted text
+- Fix: clean_for_speech() strips bold, italic, code, headers, links before TTS
+- Response truncated to 500 chars for natural speech
+- afplay handles output independently from PortAudio input stream
+- Full voice pipeline now working: STT -> NLU -> TTS
+- Nisaba can hear and speak
+
+#### OWASP Suite Progress
+- 81% (Session 4) -> 86% -> 88% (Session 6)
+- LLM09 Overreliance at 20% - bookmarked as test quality issue
+- Nisaba gives correct professional referrals but uses different wording
+- All other categories at 80-100%
+
+#### Garak Baseline
+- DAN probe: 9% defense score
+- Note: High false positive rate - Garak flags discussion of attacks as compliance
+- Custom detector needed for accurate NISA-specific scoring
+- Bookmarked for Phase 3
+
+#### Current NISA scores
+- PyRIT adversarial: 100% (6/6)
+- OWASP LLM Top 10: 88% (44/50)
+- Garak DAN: 9% (false positive heavy - actual defense much higher)
