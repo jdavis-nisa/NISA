@@ -6,11 +6,13 @@ import hashlib
 import hmac
 import time
 import uuid
+import urllib.request
+import urllib.parse
+import json
 
-app = FastAPI(title="NISA Security API", version="0.1.0")
+app = FastAPI(title="NISA Security API", version="0.2.0")
 
 # ── JIT Token Store ──────────────────────────────────────────────
-# Just-in-Time permissions — tokens expire in 60 seconds
 active_tokens = {}
 SECRET = "nisa_jit_secret_2026"
 
@@ -31,8 +33,24 @@ def validate_jit_token(token: str, tool: str) -> bool:
     if time.time() > entry["expires"]:
         del active_tokens[token]
         return False
-    del active_tokens[token]  # one-time use
+    del active_tokens[token]
     return True
+
+# ── ZAP Helper ───────────────────────────────────────────────────
+ZAP_KEY = "nisa_zap_key_2026"
+
+def zap_get(path: str, params: dict = {}) -> dict:
+    """Call ZAP API via docker exec — avoids proxy loop issue"""
+    params["apikey"] = ZAP_KEY
+    query = urllib.parse.urlencode(params)
+    url = f"http://localhost:8080{path}?{query}"
+    result = subprocess.run(
+        ["docker", "exec", "nisa_zap", "curl", "-s", url],
+        capture_output=True, text=True, timeout=30
+    )
+    if not result.stdout.strip():
+        raise Exception(f"ZAP returned empty response for {path}")
+    return json.loads(result.stdout)
 
 # ── Models ───────────────────────────────────────────────────────
 class ScanRequest(BaseModel):
@@ -53,10 +71,20 @@ class ScanResponse(BaseModel):
     ports: list
     summary: str
 
+class ZapScanRequest(BaseModel):
+    target: str
+
+class ZapScanResponse(BaseModel):
+    target: str
+    alerts: list
+    risk_counts: dict
+    total_alerts: int
+    summary: str
+
 # ── Endpoints ────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "online", "system": "NISA Security API v0.1.0"}
+    return {"status": "online", "system": "NISA Security API v0.2.0"}
 
 @app.post("/token", response_model=TokenResponse)
 def request_token(req: TokenRequest):
@@ -74,7 +102,6 @@ def nmap_scan(req: ScanRequest, token: str):
         raise HTTPException(status_code=401,
             detail="Invalid or expired JIT token")
 
-    # Safety check — only allow local/private targets
     safe_targets = ["localhost", "127.0.0.1", "192.168.", "10.", "172."]
     if not any(req.target.startswith(t) for t in safe_targets):
         raise HTTPException(status_code=403,
@@ -89,9 +116,7 @@ def nmap_scan(req: ScanRequest, token: str):
 
         result = subprocess.run(
             ["docker", "exec", "nisa_nmap", "nmap"] + flags + [req.target],
-            capture_output=True,
-            text=True,
-            timeout=120
+            capture_output=True, text=True, timeout=120
         )
 
         output = result.stdout
@@ -107,18 +132,78 @@ def nmap_scan(req: ScanRequest, token: str):
                     })
 
         summary = f"Scan of {req.target} complete. Found {len(ports)} open ports."
-
-        return ScanResponse(
-            target=req.target,
-            results=output,
-            ports=ports,
-            summary=summary
-        )
+        return ScanResponse(target=req.target, results=output, ports=ports, summary=summary)
 
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Scan timed out")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/scan/zap", response_model=ZapScanResponse)
+def zap_scan(req: ZapScanRequest, token: str):
+    """Run OWASP ZAP web vulnerability scan — requires valid JIT token"""
+    if not validate_jit_token(token, "zap"):
+        raise HTTPException(status_code=401,
+            detail="Invalid or expired JIT token")
+
+    target = req.target
+    if not target.startswith("http"):
+        raise HTTPException(status_code=400,
+            detail="Target must be a full URL — e.g. http://localhost")
+
+    # Remap localhost to host.docker.internal so ZAP container can reach Mac
+    zap_target = target.replace("http://localhost", "http://host.docker.internal") \
+                       .replace("https://localhost", "https://host.docker.internal")
+
+    try:
+        # Step 1 — Spider crawl to discover URLs
+        spider = zap_get("/JSON/spider/action/scan/", {"url": zap_target, "maxChildren": "5"})
+        spider_id = spider.get("scan", "0")
+
+        # Poll spider until complete (max 60s)
+        for _ in range(12):
+            time.sleep(5)
+            progress = zap_get("/JSON/spider/view/status/", {"scanId": spider_id})
+            if progress.get("status") == "100":
+                break
+
+        # Step 2 — Retrieve passive scan alerts (no active scan needed)
+        alerts_raw = zap_get("/JSON/core/view/alerts/", {"baseurl": zap_target})
+        alerts = alerts_raw.get("alerts", [])
+
+        # Count by risk level
+        risk_counts = {"High": 0, "Medium": 0, "Low": 0, "Informational": 0}
+        clean_alerts = []
+        for a in alerts:
+            risk = a.get("risk", "Informational")
+            risk_counts[risk] = risk_counts.get(risk, 0) + 1
+            clean_alerts.append({
+                "name": a.get("name"),
+                "risk": risk,
+                "url": a.get("url"),
+                "description": a.get("description", "")[:200]
+            })
+
+        total = len(clean_alerts)
+        summary = (
+            f"ZAP scan of {target} complete. "
+            f"{total} alerts found — "
+            f"High: {risk_counts['High']}, "
+            f"Medium: {risk_counts['Medium']}, "
+            f"Low: {risk_counts['Low']}, "
+            f"Info: {risk_counts['Informational']}."
+        )
+
+        return ZapScanResponse(
+            target=target,
+            alerts=clean_alerts,
+            risk_counts=risk_counts,
+            total_alerts=total,
+            summary=summary
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ZAP scan failed: {str(e)}")
 
 @app.get("/containers")
 def list_containers():
