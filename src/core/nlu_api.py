@@ -7,6 +7,11 @@ import sys
 sys.path.insert(0, '/Users/joshuadavis/NISA/src/core')
 from memory import store_exchange, recall_relevant, format_memory_context
 from moa_pipeline import run_moa, should_use_moa
+try:
+    from knowledge_query import get_knowledge_context
+    KNOWLEDGE_ENABLED = True
+except Exception:
+    KNOWLEDGE_ENABLED = False
 
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry import trace
@@ -182,6 +187,15 @@ def chat(request: ChatRequest):
             system_prompt = NISABA_SYSTEM_PROMPT
             if memory_context:
                 system_prompt += memory_context
+
+            # Inject knowledge graph context if available
+            if KNOWLEDGE_ENABLED and reason in ["security", "reasoning", "primary"]:
+                try:
+                    knowledge_context = get_knowledge_context(request.message)
+                    if knowledge_context:
+                        system_prompt += f"\n\nRELEVANT KNOWLEDGE BASE CONTEXT:\n{knowledge_context[:2000]}"
+                except Exception:
+                    pass
             
             completion = client.chat.completions.create(
                 model=model,
