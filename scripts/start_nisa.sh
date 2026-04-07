@@ -67,8 +67,20 @@ else
     echo "       Forensics API failed to start - check logs/forensics_api.log"
 fi
 
-# ── Step 6: Phoenix ──────────────────────────────────────────────
-echo "[ 6/6 ] Starting Arize Phoenix (port 6006)..."
+# ── Step 6: Red Team API ─────────────────────────────────────────
+echo "[ 6/7 ] Starting Red Team API (port 8084)..."
+lsof -ti:8084 | xargs kill -9 2>/dev/null || true
+python3.11 "$NISA_DIR/src/security/red_team_api.py" > "$NISA_DIR/logs/red_team_api.log" 2>&1 &
+RT_PID=$!
+sleep 1
+if curl -s http://localhost:8084/health > /dev/null 2>&1; then
+    echo "       Red Team API online - PID $RT_PID"
+else
+    echo "       Red Team API failed to start - check logs/red_team_api.log"
+fi
+
+# ── Step 7: Phoenix ──────────────────────────────────────────────
+echo "[ 7/7 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5

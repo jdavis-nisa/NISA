@@ -1,11 +1,12 @@
 import { useState } from "react"
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair } from "lucide-react"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
 import Compliance from "./components/Compliance"
 import Forensics from "./components/Forensics"
 import Memory from "./components/Memory"
+import RedTeam from "./components/RedTeam"
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
               <Route path="/security" element={<Security />} />
               <Route path="/forensics" element={<Forensics />} />
               <Route path="/memory" element={<Memory />} />
+              <Route path="/redteam" element={<RedTeam />} />
               <Route path="/compliance" element={<Compliance />} />
             </Routes>
           </main>
@@ -78,6 +80,7 @@ function Header() {
         <StatusDot label="NLU API" port={8081} />
         <StatusDot label="SECURITY API" port={8082} />
         <StatusDot label="FORENSICS API" port={8083} />
+        <StatusDot label="RED TEAM API" port={8084} />
         <StatusDot label="PHOENIX" port={6006} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
@@ -120,6 +123,7 @@ function Sidebar() {
     { to: "/security", icon: Shield, label: "SECURITY", sublabel: "Scan & Analyze" },
     { to: "/forensics", icon: Search, label: "FORENSICS", sublabel: "Log Analysis & IOC" },
     { to: "/memory", icon: Brain, label: "MEMORY", sublabel: "ChromaDB Explorer" },
+    { to: "/redteam", icon: Crosshair, label: "RED TEAM", sublabel: "Attack & Evaluate" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
   ]
   return (
