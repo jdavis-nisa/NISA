@@ -16,3 +16,4 @@ models/weights/
 # Logs
 *.log
 logs/
+models/
