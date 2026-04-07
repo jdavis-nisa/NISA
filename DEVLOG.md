@@ -572,3 +572,40 @@ Voice pipeline TTS audio conflict on macOS:
 - tshark pcap analysis in Forensics API
 - Quantum-resistant cryptography for audit trail
 - AnythingLLM RAG interface
+
+### Session 7 continued - April 7, 2026
+
+#### GraphRAG Wired into NLU API
+- knowledge_query.py written - domain detection + subprocess query
+- Detects security, radar_ew, nisaba_soul, nisa_docs domains from query
+- Injects knowledge graph context into system prompt automatically
+- Tested: OWASP prompt injection query returns knowledge-grounded response
+
+#### tshark/Wireshark pcap Analysis
+- tshark 4.6.4 installed via Homebrew
+- /analyze/pcap endpoint added to forensics_api.py
+- Extracts packets, connections, IOCs, suspicious traffic
+- RedSage analyzes every pcap
+- PCAP ANALYSIS tab added to Forensics UI
+
+#### Quantum-Resistant Cryptography - Complete
+- pqcrypto 0.4.0 installed
+- ML-DSA-65 (CRYSTALS-Dilithium Level 2) - NIST FIPS 204 standard
+- audit_trail.py upgraded - ML-DSA-65 primary, HMAC-SHA256 fallback
+- Keypair generated and stored at ~/.nisa/keys/
+- PK: 1952 bytes, SK: 4032 bytes, Signature: 3309 bytes
+- Backward compatible - verifies both old and new signatures
+- signing_algorithm column added to audit_log2 table
+- AIBOM updated with cryptographic components documentation
+- Verified: ML-DSA-65 signing and verification confirmed working
+
+#### Tools Installed
+- Burp Suite Community Edition
+- Suricata 8.0.4
+
+#### What is next
+- Suricata IDS container and UI
+- AnythingLLM RAG interface
+- Voice activation button in Chat UI
+- Update compliance PDF to show ML-DSA-65
+- Populate knowledge library with real documents

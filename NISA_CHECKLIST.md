@@ -1,4 +1,4 @@
-# NISA Build Checklist — Version 7.1
+# NISA Build Checklist — Version 7.2
 Last Updated: April 7, 2026
 Current Status: Phase 3 in progress - knowledge graph + tool expansion
 
@@ -110,7 +110,7 @@ Knowledge Graph and RAG
 [x] Security domain indexed and querying confirmed
 [x] Write knowledge/watcher.py - auto-ingestion every 5 minutes
 [x] Copy NISA docs to nisa_docs domain
-[ ] Wire GraphRAG into NLU API - Nisaba queries knowledge graph
+[x] Wire GraphRAG into NLU API - context-aware responses confirmed
 [ ] Populate security knowledge library (CVEs, NIST, OWASP docs)
 [ ] Populate radar_ew library (IEEE papers, dad's research)
 [ ] Populate nisaba_soul library
@@ -124,7 +124,8 @@ Security Tool Expansion
 [x] Install tshark 4.6.4 (Wireshark CLI)
 [x] Install Burp Suite Community Edition
 [x] Install Suricata 8.0.4
-[ ] Add tshark pcap analysis to forensics_api.py
+[x] Add tshark pcap analysis to forensics_api.py
+[x] PCAP Analysis tab added to Forensics UI
 [ ] Deploy Suricata IDS container - live network threat detection
 [ ] Wire Suricata alerts into NISA UI
 [ ] Deploy Kali Linux container
@@ -132,10 +133,10 @@ Security Tool Expansion
 [ ] Add UI voice activation button - microphone toggle in Chat tab
 
 Cryptography Upgrade
-[ ] Research CRYSTALS-Dilithium and FALCON post-quantum signing
-[ ] Replace HMAC-SHA256 audit trail with quantum-resistant algorithm
-[ ] Document quantum-resistant cryptography in AIBOM
-[ ] Update compliance PDF to reflect new signing algorithm
+[x] ML-DSA-65 (CRYSTALS-Dilithium Level 2) - NIST FIPS 204
+[x] Replace HMAC-SHA256 audit trail with quantum-resistant algorithm
+[x] Document quantum-resistant cryptography in AIBOM
+[ ] Update compliance PDF to reflect ML-DSA-65 signing algorithm
 
 Fine-tuning and Mobile
 [ ] Begin fine-tuning dataset collection
