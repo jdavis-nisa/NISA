@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, Cpu, Zap, Brain } from "lucide-react"
+import { Send, Cpu, Zap, Brain, Copy, Check } from "lucide-react"
 import axios from "axios"
+import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
+import remarkGfm from "remark-gfm"
 
 const NLU_API = "http://localhost:8081"
 
@@ -65,7 +69,6 @@ export default function Chat() {
       margin: "0 auto",
       width: "100%",
     }}>
-      {/* Messages */}
       <div style={{
         flex: 1,
         overflowY: "auto",
@@ -81,14 +84,12 @@ export default function Chat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div style={{
         border: "1px solid var(--border)",
         borderRadius: "4px",
         background: "var(--bg-panel)",
         display: "flex",
         alignItems: "flex-end",
-        gap: "0",
         marginTop: "8px",
       }}>
         <textarea
@@ -139,8 +140,204 @@ export default function Chat() {
   )
 }
 
+function CodeBlock({ language, children }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = () => {
+    navigator.clipboard.writeText(children)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div style={{ position: "relative", marginBottom: "8px" }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "4px 12px",
+        background: "#1e1e1e",
+        borderRadius: "4px 4px 0 0",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <span style={{
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "10px",
+          color: "var(--accent-gold)",
+          letterSpacing: "0.1em",
+        }}>{language || "code"}</span>
+        <button onClick={copy} style={{
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: copied ? "var(--success)" : "var(--text-dim)",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "9px",
+          letterSpacing: "0.1em",
+          padding: "2px 6px",
+        }}>
+          {copied ? <><Check size={10} /> COPIED</> : <><Copy size={10} /> COPY</>}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language || "text"}
+        style={vscDarkPlus}
+        customStyle={{
+          margin: 0,
+          borderRadius: "0 0 4px 4px",
+          fontSize: "12px",
+          lineHeight: "1.6",
+          background: "#1e1e1e",
+        }}
+        showLineNumbers={true}
+        lineNumberStyle={{
+          color: "#444",
+          fontSize: "10px",
+          minWidth: "2.5em",
+        }}
+      >
+        {children}
+      </SyntaxHighlighter>
+    </div>
+  )
+}
+
 function Message({ msg }) {
   const isUser = msg.role === "user"
+
+  const components = {
+    code({ node, inline, className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || "")
+      const language = match ? match[1] : ""
+      if (!inline && (match || String(children).includes("\n"))) {
+        return <CodeBlock language={language}>{String(children).replace(/\n$/, "")}</CodeBlock>
+      }
+      return (
+        <code style={{
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "11px",
+          background: "var(--bg-elevated)",
+          padding: "1px 6px",
+          borderRadius: "2px",
+          color: "var(--accent-cyan)",
+          border: "1px solid var(--border)",
+        }} {...props}>
+          {children}
+        </code>
+      )
+    },
+    p({ children }) {
+      return <p style={{
+        margin: "0 0 8px 0",
+        lineHeight: "1.7",
+        color: "var(--text-primary)",
+      }}>{children}</p>
+    },
+    h1({ children }) {
+      return <h1 style={{
+        fontFamily: "Rajdhani, sans-serif",
+        fontWeight: 700,
+        fontSize: "18px",
+        letterSpacing: "0.1em",
+        color: "var(--text-primary)",
+        margin: "12px 0 6px 0",
+        borderBottom: "1px solid var(--border)",
+        paddingBottom: "4px",
+      }}>{children}</h1>
+    },
+    h2({ children }) {
+      return <h2 style={{
+        fontFamily: "Rajdhani, sans-serif",
+        fontWeight: 600,
+        fontSize: "15px",
+        letterSpacing: "0.1em",
+        color: "var(--accent-gold)",
+        margin: "10px 0 4px 0",
+      }}>{children}</h2>
+    },
+    h3({ children }) {
+      return <h3 style={{
+        fontFamily: "Rajdhani, sans-serif",
+        fontWeight: 600,
+        fontSize: "13px",
+        color: "var(--text-secondary)",
+        margin: "8px 0 4px 0",
+      }}>{children}</h3>
+    },
+    ul({ children }) {
+      return <ul style={{
+        paddingLeft: "20px",
+        margin: "4px 0 8px 0",
+        color: "var(--text-primary)",
+      }}>{children}</ul>
+    },
+    ol({ children }) {
+      return <ol style={{
+        paddingLeft: "20px",
+        margin: "4px 0 8px 0",
+        color: "var(--text-primary)",
+      }}>{children}</ol>
+    },
+    li({ children }) {
+      return <li style={{
+        marginBottom: "3px",
+        lineHeight: "1.6",
+        fontFamily: "Outfit, sans-serif",
+        fontSize: "14px",
+      }}>{children}</li>
+    },
+    blockquote({ children }) {
+      return <blockquote style={{
+        borderLeft: "2px solid var(--accent-gold-dim)",
+        paddingLeft: "12px",
+        margin: "8px 0",
+        color: "var(--text-secondary)",
+        fontStyle: "italic",
+      }}>{children}</blockquote>
+    },
+    strong({ children }) {
+      return <strong style={{
+        color: "var(--text-primary)",
+        fontWeight: 600,
+      }}>{children}</strong>
+    },
+    table({ children }) {
+      return (
+        <div style={{ overflowX: "auto", marginBottom: "8px" }}>
+          <table style={{
+            borderCollapse: "collapse",
+            width: "100%",
+            fontFamily: "Outfit, sans-serif",
+            fontSize: "13px",
+          }}>{children}</table>
+        </div>
+      )
+    },
+    th({ children }) {
+      return <th style={{
+        padding: "6px 12px",
+        background: "var(--bg-elevated)",
+        borderBottom: "1px solid var(--border)",
+        fontFamily: "Rajdhani, sans-serif",
+        fontWeight: 600,
+        fontSize: "11px",
+        letterSpacing: "0.1em",
+        color: "var(--text-dim)",
+        textAlign: "left",
+      }}>{children}</th>
+    },
+    td({ children }) {
+      return <td style={{
+        padding: "6px 12px",
+        borderBottom: "1px solid var(--border)",
+        color: "var(--text-secondary)",
+      }}>{children}</td>
+    },
+  }
+
   return (
     <div style={{
       display: "flex",
@@ -149,7 +346,8 @@ function Message({ msg }) {
       animation: "fadeInUp 0.3s ease forwards",
     }}>
       <div style={{
-        maxWidth: "80%",
+        maxWidth: isUser ? "80%" : "100%",
+        width: isUser ? "auto" : "100%",
         padding: "12px 16px",
         borderRadius: "4px",
         background: isUser ? "var(--bg-elevated)" : "var(--bg-panel)",
@@ -159,9 +357,17 @@ function Message({ msg }) {
         fontSize: "14px",
         lineHeight: "1.6",
         color: "var(--text-primary)",
-        whiteSpace: "pre-wrap",
       }}>
-        {msg.content}
+        {isUser ? (
+          <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+        ) : (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={components}
+          >
+            {msg.content}
+          </ReactMarkdown>
+        )}
       </div>
       {!isUser && msg.model && msg.model !== "error" && (
         <ModelBadge model={msg.model} moa={msg.moa} reason={msg.reason} />
