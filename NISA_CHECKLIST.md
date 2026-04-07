@@ -1,6 +1,6 @@
-# NISA Build Checklist — Version 6.0
+# NISA Build Checklist — Version 6.1
 Last Updated: April 7, 2026
-Current Status: Phase 2 complete + Red Team suite, Phase 3 ready
+Current Status: Phase 2 complete + Red Team suite + Voice, Phase 3 ready
 
 WEEK 1 — Foundation COMPLETE
 [x] macOS setup, Xcode, Homebrew, Python 3.11, Git, Node, CMake
@@ -38,7 +38,7 @@ WEEK 4 — Voice Pipeline COMPLETE (TTS bookmarked)
 [x] Piper TTS 1.4.2
 [x] en_GB-alba-medium (Nisaba voice)
 [x] voice_pipeline.py - STT confirmed working
-[ ] TTS voice output - BOOKMARKED (PortAudio conflict)
+[x] TTS voice output - WORKING (afplay + markdown stripping)
 
 WEEKS 5-6 — Intelligence Core COMPLETE
 [x] nlu_api.py - FastAPI router port 8081
@@ -127,7 +127,6 @@ PHASE 4 — Radar and Electronic Warfare
 [ ] Tag v0.4.0
 
 BOOKMARKED ITEMS
-- TTS PortAudio conflict - Medium priority
 - Kali Linux container - deferred
 - audit_log table - use audit_log2 only
 - Garak DAN false positive rate - needs custom detector
@@ -154,7 +153,7 @@ Mixture of Agents reasoning         WORKING
 Persistent memory (164+ entries)    WORKING
 Cryptographic audit trail           WORKING
 Voice STT                           WORKING
-Voice TTS                           BOOKMARKED
+Voice TTS                           WORKING
 Nmap network scanning               WORKING
 OWASP ZAP web scanning              WORKING
 JIT security permissions            WORKING
