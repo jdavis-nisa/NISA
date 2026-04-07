@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain } from "lucide-react"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
 import Compliance from "./components/Compliance"
 import Forensics from "./components/Forensics"
+import Memory from "./components/Memory"
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
               <Route path="/" element={<Chat />} />
               <Route path="/security" element={<Security />} />
               <Route path="/forensics" element={<Forensics />} />
+              <Route path="/memory" element={<Memory />} />
               <Route path="/compliance" element={<Compliance />} />
             </Routes>
           </main>
@@ -115,6 +117,7 @@ function Sidebar() {
     { to: "/", icon: MessageSquare, label: "CHAT", sublabel: "Nisaba" },
     { to: "/security", icon: Shield, label: "SECURITY", sublabel: "Scan & Analyze" },
     { to: "/forensics", icon: Search, label: "FORENSICS", sublabel: "Log Analysis & IOC" },
+    { to: "/memory", icon: Brain, label: "MEMORY", sublabel: "ChromaDB Explorer" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
   ]
   return (

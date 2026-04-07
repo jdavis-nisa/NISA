@@ -189,5 +189,52 @@ def chat(request: ChatRequest):
 def list_models():
     return {"available_models": MODELS}
 
+@app.get("/memory")
+def get_memory():
+    """Return all memory entries from ChromaDB"""
+    try:
+        import chromadb
+        client = chromadb.HttpClient(host="localhost", port=8000)
+        collection = client.get_collection("nisa_memory")
+        count = collection.count()
+        results = collection.get(limit=200)
+        entries = []
+        for i, doc in enumerate(results["documents"]):
+            entries.append({
+                "id": results["ids"][i],
+                "document": doc,
+                "metadata": results["metadatas"][i] if results["metadatas"] else {}
+            })
+        return {
+            "entries": entries,
+            "stats": {"total": count, "collection": "nisa_memory"}
+        }
+    except Exception as e:
+        return {"entries": [], "stats": None, "error": str(e)}
+
+class MemorySearchRequest(BaseModel):
+    query: str
+
+@app.post("/memory/search")
+def search_memory(request: MemorySearchRequest):
+    """Semantic search across ChromaDB memories"""
+    try:
+        query = request.query
+        import chromadb
+        chroma = chromadb.HttpClient(host="localhost", port=8000)
+        collection = chroma.get_collection("nisa_memory")
+        results = collection.query(query_texts=[query], n_results=20)
+        entries = []
+        for i, doc in enumerate(results["documents"][0]):
+            entries.append({
+                "id": results["ids"][0][i],
+                "document": doc,
+                "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                "distance": results["distances"][0][i] if results.get("distances") else None
+            })
+        return {"results": entries}
+    except Exception as e:
+        return {"results": [], "error": str(e)}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8081)
