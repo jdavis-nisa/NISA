@@ -1,4 +1,4 @@
-# NISA Build Checklist — Version 7.3
+# NISA Build Checklist — Version 7.4
 Last Updated: April 7, 2026
 Current Status: Phase 3 in progress - knowledge graph + tool expansion
 
@@ -112,7 +112,9 @@ Knowledge Graph and RAG
 [x] Copy NISA docs to nisa_docs domain
 [x] Wire GraphRAG into NLU API - context-aware responses confirmed
 [ ] Populate security knowledge library (CVEs, NIST, OWASP docs)
-[ ] Populate radar_ew library (IEEE papers, dad's research)
+[x] Seed radar_ew library - fundamentals and EW techniques indexed
+[ ] Add dad's radar papers and programs (meeting tomorrow)
+[ ] Populate with IEEE papers and DTIC documents
 [ ] Populate nisaba_soul library
 [ ] Build music library on SSD
 [ ] Implement multi-hop forensic search
