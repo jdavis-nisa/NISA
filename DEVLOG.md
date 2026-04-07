@@ -654,3 +654,34 @@ REMAINING:
 - React Native mobile app
 - Full NISA demo video
 - Tag v0.3.0
+
+### Session 7 wrap-up - April 7, 2026
+
+#### Code Save Workflow
+- SAVE TO NISA button added to all code blocks in Chat UI
+- Domain dropdown: Security, Radar/EW, Programs, General, NISA Docs
+- /save_code endpoint added to NLU API
+- Security check - only allows saves to SSD knowledge path
+- Tested: code saved from UI to /Volumes/Share Drive/NISA/knowledge/programs/input/
+- test_save.py confirmed on SSD
+
+#### Fine-tuning Pipeline
+- finetune/ directory structure created
+- build_dataset.py - converts SSD knowledge docs to MLX-LM JSONL format
+- phi4_security_lora.yaml - LoRA config for Phi-4 14B
+- train.sh - 3-step launcher: build dataset, train, fuse adapter
+- Dataset tested: 56 examples from current documents
+- Will grow significantly after dad's papers and web scraper content added
+- nisa_docs duplicate loading noted - fix tomorrow
+
+#### Tomorrow's Plan
+1. Meeting with dad - collect radar papers and programs
+2. Populate knowledge library - NIST, MITRE ATT&CK, DTIC
+3. Build web scraper for automated content gathering
+4. Security hardening and access audit
+5. Desktop application - Electron wrapper
+6. UI customization and polish
+7. Conversation history browser
+8. Autonomous patch workflow
+9. Demo video prep and script
+10. Fine-tune Phi-4 when dataset is large enough
