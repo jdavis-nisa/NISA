@@ -281,6 +281,42 @@ def search_memory(request: MemorySearchRequest):
     except Exception as e:
         return {"results": [], "error": str(e)}
 
+class SaveCodeRequest(BaseModel):
+    content: str
+    filename: str
+    domain_path: str
+    language: str = "text"
+
+@app.post("/save_code")
+async def save_code(req: SaveCodeRequest):
+    """Save a code block to the SSD knowledge library"""
+    import os
+    try:
+        # Security check - only allow saves to the SSD knowledge path
+        allowed_base = "/Volumes/Share Drive/NISA/knowledge"
+        if not req.domain_path.startswith(allowed_base):
+            raise HTTPException(status_code=403, detail="Invalid save path")
+
+        # Create input subfolder if it doesn't exist
+        save_dir = os.path.join(req.domain_path, "input")
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Save the file
+        save_path = os.path.join(save_dir, req.filename)
+        with open(save_path, "w") as f:
+            f.write(req.content)
+
+        return {
+            "status": "saved",
+            "path": save_path,
+            "filename": req.filename,
+            "domain": req.domain_path.split("/")[-1]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/voice")
 async def voice_input(audio: UploadFile = File(...)):
     """Accept audio file, transcribe with Whisper, return transcript"""

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff } from "lucide-react"
+import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff, Save } from "lucide-react"
 import axios from "axios"
 import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -197,13 +197,46 @@ export default function Chat() {
   )
 }
 
+const SAVE_DOMAINS = [
+  { label: "Security", path: "/Volumes/Share Drive/NISA/knowledge/security" },
+  { label: "Radar/EW", path: "/Volumes/Share Drive/NISA/knowledge/radar_ew" },
+  { label: "Programs", path: "/Volumes/Share Drive/NISA/knowledge/programs" },
+  { label: "General", path: "/Volumes/Share Drive/NISA/knowledge/general" },
+  { label: "NISA Docs", path: "/Volumes/Share Drive/NISA/knowledge/nisa_docs" },
+]
+
 function CodeBlock({ language, children }) {
   const [copied, setCopied] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [showSaveMenu, setShowSaveMenu] = useState(false)
 
   const copy = () => {
     navigator.clipboard.writeText(children)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const saveToNISA = async (domain) => {
+    setShowSaveMenu(false)
+    setSaving(true)
+    try {
+      const ext = language || "txt"
+      const filename = `nisa_code_${Date.now()}.${ext}`
+      const res = await axios.post("http://localhost:8081/save_code", {
+        content: String(children),
+        filename,
+        domain_path: domain.path,
+        language: language || "text"
+      })
+      if (res.data.status === "saved") {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (e) {
+      console.error("Save failed:", e)
+    }
+    setSaving(false)
   }
 
   return (
@@ -238,6 +271,49 @@ function CodeBlock({ language, children }) {
         }}>
           {copied ? <><Check size={10} /> COPIED</> : <><Copy size={10} /> COPY</>}
         </button>
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowSaveMenu(!showSaveMenu)}
+            style={{
+              display: "flex", alignItems: "center", gap: "4px",
+              padding: "4px 8px",
+              background: saved ? "var(--success)" : "var(--bg-primary)",
+              border: "1px solid var(--border)",
+              borderRadius: "3px",
+              color: saved ? "var(--bg-primary)" : "var(--accent-gold)",
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: "9px", letterSpacing: "0.1em",
+              cursor: "pointer",
+            }}
+          >
+            {saved ? <><Check size={10} /> SAVED</> : saving ? "SAVING..." : <><Save size={10} /> SAVE TO NISA</>}
+          </button>
+          {showSaveMenu && (
+            <div style={{
+              position: "absolute", top: "100%", right: 0, zIndex: 100,
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              minWidth: "150px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+            }}>
+              {SAVE_DOMAINS.map(d => (
+                <div key={d.label} onClick={() => saveToNISA(d)} style={{
+                  padding: "8px 12px",
+                  fontFamily: "Rajdhani, sans-serif",
+                  fontWeight: 600, fontSize: "11px",
+                  letterSpacing: "0.1em",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  borderBottom: "1px solid var(--border)",
+                }}
+                onMouseEnter={e => e.target.style.color = "var(--accent-gold)"}
+                onMouseLeave={e => e.target.style.color = "var(--text-secondary)"}
+                >{d.label}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <SyntaxHighlighter
         language={language || "text"}
