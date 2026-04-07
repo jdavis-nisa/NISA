@@ -60,7 +60,7 @@ export default function Compliance() {
           value={auditRows.filter(r => r.signature).length}
           color="var(--success)"
         />
-        <StatCard label="SIGNING ALGO" value="HMAC-SHA256" mono />
+        <StatCard label="SIGNING ALGO" value="ML-DSA-65" mono />
         <StatCard label="STORAGE" value="PostgreSQL" mono />
       </div>
 
