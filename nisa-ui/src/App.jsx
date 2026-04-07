@@ -81,6 +81,7 @@ function Header() {
         <StatusDot label="SECURITY API" port={8082} />
         <StatusDot label="FORENSICS API" port={8083} />
         <StatusDot label="RED TEAM API" port={8084} />
+        <StatusDot label="SURICATA IDS" port={8085} />
         <StatusDot label="PHOENIX" port={6006} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",

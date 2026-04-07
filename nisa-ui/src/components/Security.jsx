@@ -1,8 +1,9 @@
-import { useState } from "react"
-import { Shield, Radar, Globe, ChevronRight, AlertTriangle, CheckCircle, Info } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Shield, Radar, Globe, ChevronRight, AlertTriangle, CheckCircle, Info, Activity } from "lucide-react"
 import axios from "axios"
 
 const SEC_API = "http://localhost:8082"
+const IDS_API = "http://localhost:8085"
 
 export default function Security() {
   const [activeTab, setActiveTab] = useState("nmap")
@@ -25,6 +26,7 @@ export default function Security() {
         {[
           { id: "nmap", label: "NMAP SCAN", icon: Radar },
           { id: "zap", label: "ZAP SCAN", icon: Globe },
+          { id: "ids", label: "SURICATA IDS", icon: Activity },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             display: "flex",
@@ -51,6 +53,7 @@ export default function Security() {
 
       {activeTab === "nmap" && <NmapPanel />}
       {activeTab === "zap" && <ZapPanel />}
+      {activeTab === "ids" && <SuricataPanel />}
     </div>
   )
 }
@@ -510,4 +513,77 @@ const tdStyle = {
   color: "var(--text-secondary)",
   padding: "6px 8px",
   borderBottom: "1px solid var(--border)",
+}
+
+// ── Suricata IDS Panel ───────────────────────────────────────────
+function SuricataPanel() {
+  const [status, setStatus] = useState(null)
+  const [alerts, setAlerts] = useState([])
+  const [analysis, setAnalysis] = useState("")
+  const [analyzing, setAnalyzing] = useState(false)
+
+  const fetchStatus = async () => {
+    try { const r = await axios.get(`${IDS_API}/status`); setStatus(r.data) } catch(e) {}
+  }
+  const fetchAlerts = async (analyze = false) => {
+    if (analyze) setAnalyzing(true)
+    try {
+      const r = await axios.get(`${IDS_API}/alerts?analyze=${analyze}&limit=20`)
+      setAlerts(r.data.alerts || [])
+      if (analyze) setAnalysis(r.data.analysis || "")
+    } catch(e) {}
+    if (analyze) setAnalyzing(false)
+  }
+  const runTest = async () => {
+    try { await axios.post(`${IDS_API}/test`); fetchAlerts(false) } catch(e) {}
+  }
+
+  useEffect(() => {
+    fetchStatus(); fetchAlerts(false)
+    const t = setInterval(() => { fetchStatus(); fetchAlerts(false) }, 10000)
+    return () => clearInterval(t)
+  }, [])
+
+  const sevColor = { 1: "var(--danger)", 2: "var(--warning)", 3: "var(--accent-cyan)" }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <Panel title="IDS STATUS">
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: status?.running ? "var(--success)" : "var(--text-dim)", boxShadow: status?.running ? "0 0 6px var(--success)" : "none" }} />
+            <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--text-secondary)" }}>{status?.running ? "MONITORING" : "STANDBY"}</span>
+          </div>
+          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>{status?.rules_loaded?.toLocaleString() || "49,494"} rules</span>
+          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>{status?.total_alerts || 0} alerts</span>
+        </div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <ScanButton onClick={() => fetchAlerts(true)} loading={analyzing} label="ANALYZE ALERTS" />
+          <button onClick={runTest} style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "2px", color: "var(--text-dim)", fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.1em", cursor: "pointer" }}>INJECT TEST</button>
+          <button onClick={() => { fetchStatus(); fetchAlerts(false) }} style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "2px", color: "var(--text-dim)", fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.1em", cursor: "pointer" }}>REFRESH</button>
+        </div>
+      </Panel>
+
+      <Panel title={`LIVE ALERTS (${alerts.length})`}>
+        {alerts.length === 0 ? (
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--success)", textAlign: "center", padding: "16px" }}>No alerts — network is clean</div>
+        ) : alerts.map((a, i) => (
+          <div key={i} style={{ padding: "8px 12px", borderLeft: `2px solid ${sevColor[a.severity] || "var(--border)"}`, background: "var(--bg-secondary)", marginBottom: "6px", borderRadius: "0 2px 2px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: "12px", color: "var(--text-primary)" }}>{a.signature}</span>
+              <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: sevColor[a.severity] || "var(--text-dim)" }}>SEV {a.severity}</span>
+            </div>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>{a.src_ip} → {a.dest_ip} | {a.proto} | {a.category}</div>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", marginTop: "2px" }}>{a.timestamp?.slice(0,19)}</div>
+          </div>
+        ))}
+      </Panel>
+
+      {analysis && (
+        <Panel title="REDSAGE IDS ANALYSIS">
+          <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", lineHeight: "1.7", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>{analysis}</div>
+        </Panel>
+      )}
+    </div>
+  )
 }
