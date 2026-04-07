@@ -77,6 +77,8 @@ function Header() {
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <StatusDot label="NLU API" port={8081} />
         <StatusDot label="SECURITY API" port={8082} />
+        <StatusDot label="FORENSICS API" port={8083} />
+        <StatusDot label="PHOENIX" port={6006} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
