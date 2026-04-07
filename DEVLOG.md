@@ -315,3 +315,30 @@ Voice pipeline TTS audio conflict on macOS:
 - React Web UI - makes NISA demo-able to anyone
 - Scaffold with Vite, dark mode, chat interface
 - Model indicator, security dashboard, compliance report download
+
+### Session 5 continued - April 6, 2026
+
+#### React Web UI - Complete
+
+**Stack**
+- Vite + React, Tailwind CSS, axios, react-router-dom, lucide-react
+- Rajdhani + JetBrains Mono + Outfit font stack
+- Dark navy theme with gold accents, subtle grid background
+
+**Components built**
+- App.jsx - shell, header, sidebar navigation, API status dots
+- Chat.jsx - full chat interface with model indicator and MoA badge
+- Security.jsx - Nmap and ZAP scan panels with RedSage analysis display
+- Compliance.jsx - audit log table and PDF report generation
+
+**CORS fixed on both APIs**
+- NLU API and Security API now accept requests from localhost:5173
+
+**Confirmed working end to end**
+- Chat with Nisaba - routing, MoA, model indicator all showing correctly
+- Nmap scan - results table, RedSage analysis, raw output all rendering
+- UI accessible at http://localhost:5173
+
+**What is next**
+- Phase 3: Samsung T9 SSD purchase, GraphRAG, Arize Phoenix
+- Or: Forensics API to complete defensive security lifecycle
