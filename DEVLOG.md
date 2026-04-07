@@ -281,3 +281,37 @@ Voice pipeline TTS audio conflict on macOS:
 - forensics_api.py
 - React web UI
 - Arize Phoenix observability
+### Session 5 - April 6, 2026
+
+#### Phase 2 Complete - Cybersecurity Platform
+
+**ZAP Web Scan Endpoint**
+- Fixed ZAP proxy loop issue - switched to docker exec for ZAP API calls
+- Fixed localhost -> host.docker.internal remapping for container networking
+- ZAP endpoint working - spider crawl + passive scan + alert retrieval
+- JIT token authentication on all scan endpoints
+
+**RedSage Security Routing**
+- Wired RedSage 8B into Nmap and ZAP scan endpoints
+- Every scan now gets automatic AI security analysis
+- RedSage identifies risks, findings, and remediation steps
+- Confirmed working - rpcbind analysis on port 111 correct
+
+**Compliance PDF Generator**
+- Written: src/core/compliance_report.py
+- ReportLab - professional layout with NISA branding
+- Pulls from audit_log2 - HMAC-SHA256 signature verification
+- Executive summary, event breakdown, full audit log table
+- First report generated and committed to benchmarks/results/
+
+**Git Cleanup**
+- Purged model files from git history via filter-branch
+- Fixed .gitignore - models/ now fully excluded
+- Force pushed clean history to GitHub
+
+**Tagged v0.2.0**
+
+#### What is next
+- React Web UI - makes NISA demo-able to anyone
+- Scaffold with Vite, dark mode, chat interface
+- Model indicator, security dashboard, compliance report download
