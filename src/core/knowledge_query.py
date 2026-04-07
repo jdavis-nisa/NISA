@@ -18,10 +18,29 @@ DOMAIN_KEYWORDS = {
         "authentication", "authorization", "privilege", "escalation"
     ],
     "radar_ew": [
-        "radar", "signal", "waveform", "frequency", "antenna", "doppler",
-        "electronic warfare", "ew", "jamming", "spoofing", "rfid", "lidar",
-        "sonar", "pulse", "modulation", "bandwidth", "spectrum", "clutter",
-        "target detection", "tracking", "beamforming", "phased array"
+        "radar system", "radar signal", "radar waveform", "radar cross section",
+        "phased array", "phased-array", "beamforming", "beam steering",
+        "electronic warfare", "electronic attack", "electronic protection",
+        "electronic support", "ew system", "ew threat",
+        "fmcw", "frequency modulated continuous wave",
+        "pulse compression", "matched filter radar",
+        "doppler radar", "doppler shift", "doppler frequency",
+        "radar antenna", "antenna gain", "radar range equation",
+        "low probability of intercept", "lpi radar", "lpi waveform",
+        "noise jamming", "barrage jamming", "deception jamming",
+        "range gate pull", "velocity gate pull", "radar jamming",
+        "radar warning receiver", "rwr", "threat library",
+        "synthetic aperture radar", "sar imaging",
+        "moving target indicator", "mti filter",
+        "constant false alarm", "cfar detector",
+        "space-time adaptive", "stap processing",
+        "aesa radar", "active electronically scanned",
+        "radar clutter", "ground clutter", "sea clutter",
+        "polyphase code", "frank code", "chirp waveform",
+        "frequency hopping radar", "pulse repetition",
+        "target detection radar", "target tracking radar",
+        "anti-radiation missile", "harm missile",
+        "signal intelligence", "sigint", "direction finding radar"
     ],
     "nisaba_soul": [
         "nisaba", "your personality", "who are you", "your values",
