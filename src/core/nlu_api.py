@@ -9,6 +9,23 @@ from memory import store_exchange, recall_relevant, format_memory_context
 from moa_pipeline import run_moa, should_use_moa
 
 from fastapi.middleware.cors import CORSMiddleware
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from openinference.instrumentation.openai import OpenAIInstrumentor
+
+# ── Phoenix Observability ─────────────────────────────────────────
+try:
+    exporter = OTLPSpanExporter(endpoint="http://localhost:6006/v1/traces")
+    provider = TracerProvider()
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+    OpenAIInstrumentor().instrument()
+    print("Phoenix tracing enabled - http://localhost:6006")
+except Exception as e:
+    print(f"Phoenix tracing unavailable: {e}")
+
 app = FastAPI(title="NISA NLU API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
