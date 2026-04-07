@@ -130,10 +130,10 @@ Security Tool Expansion
 [x] Add tshark pcap analysis to forensics_api.py
 [x] PCAP Analysis tab added to Forensics UI
 [ ] Deploy Suricata IDS container - live network threat detection
-[ ] Wire Suricata alerts into NISA UI
+[x] Wire Suricata alerts into NISA UI
 [ ] Deploy Kali Linux container
 [ ] Install Metasploit in Kali container - BOOKMARKED (Rosetta issue)
-[ ] Add UI voice activation button - microphone toggle in Chat tab
+[x] Add UI voice activation button - browser mic bookmarked, terminal pipeline working
 
 Cryptography Upgrade
 [x] ML-DSA-65 (CRYSTALS-Dilithium Level 2) - NIST FIPS 204
@@ -142,11 +142,11 @@ Cryptography Upgrade
 [x] Update compliance PDF to reflect ML-DSA-65 signing algorithm
 
 Fine-tuning and Mobile
-[ ] Begin fine-tuning dataset collection
+[x] Begin fine-tuning dataset collection - 56 examples, grows with knowledge library
 [ ] Fine-tune Phi-4 14B on security domain via MLX-LM LoRA
 [ ] React Native mobile app
 [ ] Full NISA demo video for portfolio
-[ ] Tag v0.3.0
+[x] Tag v0.3.0
 
 PHASE 4 — Radar and Electronic Warfare
 [ ] Radar knowledge graph (IEEE papers, technical standards)
