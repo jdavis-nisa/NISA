@@ -17,3 +17,4 @@ models/weights/
 *.log
 logs/
 models/
+knowledge_vectors/
