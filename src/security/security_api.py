@@ -11,7 +11,14 @@ import urllib.parse
 import json
 from openai import OpenAI
 
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="NISA Security API", version="0.2.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ── RedSage LLM Client ───────────────────────────────────────────
 llm = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")

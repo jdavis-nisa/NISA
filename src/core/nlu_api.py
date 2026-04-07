@@ -8,7 +8,14 @@ sys.path.insert(0, '/Users/joshuadavis/NISA/src/core')
 from memory import store_exchange, recall_relevant, format_memory_context
 from moa_pipeline import run_moa, should_use_moa
 
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="NISA NLU API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 client = OpenAI(
     base_url="http://localhost:1234/v1",

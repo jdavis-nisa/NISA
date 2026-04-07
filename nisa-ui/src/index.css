@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg-primary: #080c14;
+  --bg-secondary: #0d1520;
+  --bg-panel: #111927;
+  --bg-elevated: #162030;
+  --border: #1e3048;
+  --border-bright: #2a4a6e;
+  --accent-gold: #c9a84c;
+  --accent-gold-dim: #8a6e2e;
+  --accent-gold-glow: rgba(201, 168, 76, 0.15);
+  --accent-cyan: #4ab8c9;
+  --accent-cyan-dim: #2a7a8a;
+  --text-primary: #e8edf5;
+  --text-secondary: #8a9bb5;
+  --text-dim: #4a5a72;
+  --success: #3db87a;
+  --warning: #e8a030;
+  --danger: #e84040;
+  --grid-line: rgba(30, 48, 72, 0.6);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+/* Glow effects */
+.glow-gold { box-shadow: 0 0 20px var(--accent-gold-glow); }
+.glow-text-gold { text-shadow: 0 0 20px rgba(201, 168, 76, 0.4); }
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--border); }
+  50% { border-color: var(--accent-gold-dim); }
+}
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.fade-in { animation: fadeInUp 0.4s ease forwards; }
