@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Search, FileSearch, Hash, Clock, AlertTriangle, CheckCircle, ChevronRight } from "lucide-react"
+import { Search, FileSearch, Hash, Clock, AlertTriangle, CheckCircle, ChevronRight, Network } from "lucide-react"
 import axios from "axios"
 
 const FORENSICS_API = "http://localhost:8083"
@@ -12,7 +12,7 @@ export default function Forensics() {
       <PageHeader
         icon={FileSearch}
         title="FORENSICS"
-        subtitle="Log analysis, IOC extraction, file integrity, and timeline reconstruction"
+        subtitle="Log analysis, IOC extraction, file integrity, pcap analysis"
       />
 
       {/* Tabs */}
@@ -26,6 +26,7 @@ export default function Forensics() {
           { id: "logs", label: "LOG ANALYSIS", icon: Search },
           { id: "ioc", label: "IOC EXTRACTOR", icon: AlertTriangle },
           { id: "hash", label: "FILE HASH", icon: Hash },
+          { id: "pcap", label: "PCAP ANALYSIS", icon: Network },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             display: "flex",
@@ -53,6 +54,7 @@ export default function Forensics() {
       {activeTab === "logs" && <LogAnalysisPanel />}
       {activeTab === "ioc" && <IOCPanel />}
       {activeTab === "hash" && <HashPanel />}
+      {activeTab === "pcap" && <PcapPanel />}
     </div>
   )
 }
@@ -445,6 +447,131 @@ function HashPanel() {
             )}
           </div>
         </Panel>
+      )}
+    </div>
+  )
+}
+
+function PcapPanel() {
+  const [filePath, setFilePath] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+
+  const analyze = async () => {
+    if (!filePath.trim()) return
+    setLoading(true)
+    setResult(null)
+    setError(null)
+    try {
+      const res = await axios.post(`${FORENSICS_API}/analyze/pcap`, {
+        pcap_path: filePath,
+        max_packets: 1000
+      })
+      setResult(res.data)
+    } catch (e) {
+      setError(e.response?.data?.detail || e.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <Panel title="PCAP FILE ANALYSIS">
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div>
+            <FieldLabel>PCAP FILE PATH</FieldLabel>
+            <input
+              value={filePath}
+              onChange={e => setFilePath(e.target.value)}
+              placeholder="/tmp/capture.pcap"
+              style={{ ...inputStyle, width: "100%" }}
+            />
+          </div>
+          <ScanButton onClick={analyze} loading={loading} label="ANALYZE PCAP" />
+        </div>
+      </Panel>
+
+      {loading && <LoadingPanel label="Analyzing pcap with tshark..." />}
+      {error && <ErrorPanel message={error} />}
+
+      {result && (
+        <>
+          <Panel title="CAPTURE SUMMARY">
+            <StatRow label="Total Packets" value={result.total_packets} />
+            <StatRow label="Source IPs" value={result.unique_src_ips.length} />
+            <StatRow label="Dest IPs" value={result.unique_dst_ips.length} />
+            <StatRow label="Summary" value={result.summary} />
+          </Panel>
+
+          {result.suspicious?.length > 0 && (
+            <Panel title={`SUSPICIOUS CONNECTIONS (${result.suspicious.length})`}>
+              {result.suspicious.map((s, i) => (
+                <div key={i} style={{
+                  padding: "8px 12px",
+                  borderLeft: "2px solid var(--danger)",
+                  background: "var(--bg-secondary)",
+                  marginBottom: "6px",
+                  borderRadius: "0 2px 2px 0",
+                }}>
+                  <div style={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "11px",
+                    color: "var(--text-secondary)",
+                  }}>{s.connection}</div>
+                  <div style={{
+                    fontFamily: "Rajdhani, sans-serif",
+                    fontSize: "10px",
+                    color: "var(--danger)",
+                    letterSpacing: "0.1em",
+                  }}>{s.reason} — {s.packet_count} packets</div>
+                </div>
+              ))}
+            </Panel>
+          )}
+
+          {Object.keys(result.iocs || {}).length > 0 && (
+            <Panel title="EXTRACTED IOCs">
+              {Object.entries(result.iocs).map(([type, values]) => (
+                <div key={type} style={{ marginBottom: "10px" }}>
+                  <div style={{
+                    fontFamily: "Rajdhani, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "10px",
+                    letterSpacing: "0.15em",
+                    color: "var(--accent-gold)",
+                    marginBottom: "4px",
+                  }}>{type.toUpperCase()}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {values.map((v, i) => (
+                      <span key={i} style={{
+                        fontFamily: "JetBrains Mono, monospace",
+                        fontSize: "10px",
+                        color: "var(--text-secondary)",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border)",
+                        padding: "2px 8px",
+                        borderRadius: "2px",
+                      }}>{v}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </Panel>
+          )}
+
+          {result.analysis && (
+            <Panel title="REDSAGE FORENSIC ANALYSIS">
+              <div style={{
+                fontFamily: "Outfit, sans-serif",
+                fontSize: "13px",
+                lineHeight: "1.7",
+                color: "var(--text-primary)",
+                whiteSpace: "pre-wrap",
+              }}>{result.analysis}</div>
+            </Panel>
+          )}
+        </>
       )}
     </div>
   )
