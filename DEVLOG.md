@@ -372,3 +372,29 @@ Voice pipeline TTS audio conflict on macOS:
 
 **NISA UI now has 4 tabs**
 - Chat, Security, Forensics, Compliance
+
+### Session 5 continued - April 6, 2026
+
+#### Arize Phoenix Observability - Complete
+
+**Installation**
+- arize-phoenix 13.23.0 installed
+- openinference-instrumentation-openai already present (came with Phoenix)
+- Phoenix server running on port 6006
+
+**Wired into NLU API**
+- OpenTelemetry TracerProvider configured
+- OTLPSpanExporter sending to http://localhost:6006/v1/traces
+- OpenAIInstrumentor instruments all OpenAI client calls
+- service.name: nisa-nlu-api
+
+**Confirmed working**
+- First trace captured: ChatCompletion, 26.2s latency
+- Full input/output visible in Phoenix UI
+- Every Nisaba conversation now traced
+
+**What Phoenix shows**
+- Total traces, latency P50/P99
+- Span details: input messages, output, token counts
+- LLM call chain visualization
+- Cost tracking per request
