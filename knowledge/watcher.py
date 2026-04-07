@@ -56,6 +56,8 @@ def scan_domain(domain: str, state: dict) -> list:
     for root, dirs, files in os.walk(domain_path):
         dirs[:] = [d for d in dirs if d not in ["input", "output", "cache", "logs", "prompts"]]
         for fname in files:
+            if fname.startswith("._") or fname.startswith("."):
+                continue
             ext = os.path.splitext(fname)[1].lower()
             if ext not in SUPPORTED_EXTENSIONS:
                 continue
