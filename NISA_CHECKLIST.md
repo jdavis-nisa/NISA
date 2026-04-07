@@ -1,4 +1,4 @@
-# NISA Build Checklist — Version 7.0
+# NISA Build Checklist — Version 7.1
 Last Updated: April 7, 2026
 Current Status: Phase 3 in progress - knowledge graph + tool expansion
 
@@ -103,12 +103,17 @@ SESSION TOOLING COMPLETE
 PHASE 3 — Knowledge Graph, Automation, and Tool Expansion NEXT
 
 Knowledge Graph and RAG
-[ ] Format and mount Samsung T9 2TB external SSD
-[ ] Deploy Neo4j on external SSD
-[ ] Install GraphRAG - pip install graphrag
-[ ] Write knowledge/watcher.py - file auto-ingestion
-[ ] Build security knowledge library (CVEs, NIST, OWASP docs, IEEE papers)
-[ ] Build radar/EW knowledge library (IEEE papers, waveform standards)
+[x] Mount Samsung T9 2TB external SSD - /Volumes/Share Drive
+[x] Create 18 knowledge domains on SSD
+[x] Install GraphRAG 3.0.8
+[x] Configure GraphRAG for LM Studio (security, radar_ew, general, nisaba_soul, nisa_docs)
+[x] Security domain indexed and querying confirmed
+[x] Write knowledge/watcher.py - auto-ingestion every 5 minutes
+[x] Copy NISA docs to nisa_docs domain
+[ ] Wire GraphRAG into NLU API - Nisaba queries knowledge graph
+[ ] Populate security knowledge library (CVEs, NIST, OWASP docs)
+[ ] Populate radar_ew library (IEEE papers, dad's research)
+[ ] Populate nisaba_soul library
 [ ] Build music library on SSD
 [ ] Implement multi-hop forensic search
 [ ] Configure Arize Phoenix semantic drift monitoring
@@ -116,12 +121,14 @@ Knowledge Graph and RAG
 [ ] Build task scheduler and learning engine
 
 Security Tool Expansion
-[ ] Add tshark/Wireshark pcap analysis to forensics_api.py
+[x] Install tshark 4.6.4 (Wireshark CLI)
+[x] Install Burp Suite Community Edition
+[x] Install Suricata 8.0.4
+[ ] Add tshark pcap analysis to forensics_api.py
 [ ] Deploy Suricata IDS container - live network threat detection
 [ ] Wire Suricata alerts into NISA UI
-[ ] Install Burp Suite community edition - replace ZAP as primary web scanner
 [ ] Deploy Kali Linux container
-[ ] Install Metasploit Framework in Kali container (authorized targets only)
+[ ] Install Metasploit in Kali container - BOOKMARKED (Rosetta issue)
 [ ] Add UI voice activation button - microphone toggle in Chat tab
 
 Cryptography Upgrade

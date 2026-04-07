@@ -521,3 +521,54 @@ Voice pipeline TTS audio conflict on macOS:
 - PyRIT adversarial: 100% (6/6)
 - OWASP LLM Top 10: 88% (44/50)
 - Garak DAN: 9% (false positive heavy - actual defense much higher)
+
+### Session 7 - April 7, 2026
+
+#### Phase 3 Started - Knowledge Graph and Tool Expansion
+
+**SSD Knowledge Library**
+- Samsung T9 2TB SSD mounted at /Volumes/Share Drive
+- 18 knowledge domains created:
+  security, radar_ew, general, templates, programs, certifications,
+  writing, resume_career, contracts_proposals, research, health,
+  finances, spiritual, nisa_docs, tools, nisaba_soul, music
+- NISA docs copied to nisa_docs domain
+
+**GraphRAG Knowledge Pipeline**
+- GraphRAG 3.0.8 installed
+- Security domain indexed and querying confirmed
+- Query tested: defenses against prompt injection - full knowledge graph response
+- LanceDB vectors stored locally at ~/NISA/knowledge_vectors/
+- GraphRAG initialized for 5 domains: security, radar_ew, general, nisaba_soul, nisa_docs
+- LM Studio context length set to 32768 for GraphRAG queries (manual per session)
+- Bookmarked: context length persistence in LM Studio
+
+**Knowledge Watcher**
+- knowledge/watcher.py written and tested
+- Auto-detects new/changed files on SSD every 5 minutes
+- Copies to GraphRAG input folder and runs indexing automatically
+- macOS metadata files filtered out
+- Added to start_nisa.sh
+
+**Security Tools Installed**
+- tshark 4.6.4 (Wireshark CLI)
+- Burp Suite Community Edition
+- Suricata 8.0.4
+- Metasploit - bookmarked (requires Rosetta 2, will use Kali Docker instead)
+
+**Security Hardening**
+- PyRIT score: 67% -> 100%
+- OWASP score: 81% -> 88%
+- System prompt hardened against injection, authority escalation
+- Professional referral boundaries added
+
+**TTS Voice Unblocked**
+- Fixed by stripping markdown before Piper synthesis
+- Full voice pipeline working: STT -> NLU -> TTS
+
+**What is next**
+- Wire GraphRAG into NLU API
+- Suricata IDS container
+- tshark pcap analysis in Forensics API
+- Quantum-resistant cryptography for audit trail
+- AnythingLLM RAG interface
