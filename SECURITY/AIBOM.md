@@ -112,3 +112,15 @@ This document is updated whenever:
 
 *NISA AIBOM — Supply Chain Security Record*
 *github.com/jdavis-nisa/NISA/SECURITY/AIBOM.md*
+## Cryptographic Components
+
+### Audit Trail Signing
+| Algorithm | Standard | Key Size | Signature Size | Status |
+|---|---|---|---|---|
+| ML-DSA-65 | NIST FIPS 204 | PK: 1952B, SK: 4032B | 3309B | PRIMARY |
+| HMAC-SHA256 | RFC 2104 | 256-bit | 256-bit | LEGACY FALLBACK |
+
+ML-DSA-65 (CRYSTALS-Dilithium Level 2) is a post-quantum digital signature algorithm
+standardized by NIST in FIPS 204 (August 2024). It provides security against both
+classical and quantum computer attacks. Keys are generated locally and stored at
+~/.nisa/keys/ - never transmitted or stored in the repository.
