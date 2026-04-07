@@ -449,3 +449,40 @@ Voice pipeline TTS audio conflict on macOS:
 - GraphRAG auto-ingestion pipeline
 - Arize Phoenix semantic drift monitoring
 - AnythingLLM RAG interface
+
+### Session 6 - April 7, 2026
+
+#### Garak Integration - Complete
+- Garak 0.14.1 working with REST generator
+- JSON config: ~/NISA/red_team/garak_nisa.json
+- Baseline established: dan.Ablation_Dan_11_0 - DC-2 Very High Risk
+- HTML report saved to benchmarks/results/
+- Note: High attack success rate due to Garak detector false positives
+  (flags discussion of DAN as compliance)
+
+#### Red Team API - Complete
+- src/security/red_team_api.py - FastAPI on port 8084
+- red_team_sessions table created in PostgreSQL
+- /run - launch attack in background, returns session_id
+- /session/{id} - live polling with turn-by-turn results
+- /sessions - full history
+- /history - regression data by version
+- Supports: PyRIT, OWASP, Garak attack types
+- Quick/Standard/Deep intensity levels
+
+#### Red Team UI - Complete
+- nisa-ui/src/components/RedTeam.jsx
+- Launch Attack panel - attack type selector, intensity, RUN RED TEAM button
+- Live Results Feed - real-time turn feed, score bar, status indicator
+- Session History table - all past runs with scores and duration
+- Security Regression chart - defense score by version (recharts)
+- Historical data seeded: PyRIT 100% v0.1.0/v0.2.0, OWASP 81% v0.2.0
+
+#### NISA UI now has 6 tabs
+- Chat, Security, Forensics, Memory, Red Team, Compliance
+
+#### UI Polish
+- Markdown + syntax highlighting in Chat (react-markdown, react-syntax-highlighter)
+- Code blocks with line numbers and copy button
+- All 5 API status dots in header (NLU, Security, Forensics, Red Team, Phoenix)
+- start_nisa.sh updated to start Red Team API
