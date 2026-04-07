@@ -25,7 +25,23 @@ IN_PATH         = "/tmp/nisaba_input.wav"
 
 
 # ── Text to Speech ───────────────────────────────────────────────
+def clean_for_speech(text: str) -> str:
+    """Strip markdown formatting before sending to TTS"""
+    import re
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # bold
+    text = re.sub(r'\*(.+?)\*', r'\1', text)        # italic
+    text = re.sub(r'`(.+?)`', r'\1', text)            # code
+    text = re.sub(r'#{1,6}\s', '', text)              # headers
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text) # links
+    text = re.sub(r'\n+', ' ', text)                  # newlines
+    text = re.sub(r'\s+', ' ', text)                  # extra spaces
+    return text.strip()
+
 def speak(text: str):
+    text = clean_for_speech(text)
+    # Truncate long responses for speech
+    if len(text) > 500:
+        text = text[:500] + "... I have more details if you need them."
     print(f"\nNisaba: {text}\n")
     try:
         piper = subprocess.Popen(
