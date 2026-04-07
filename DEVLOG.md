@@ -342,3 +342,33 @@ Voice pipeline TTS audio conflict on macOS:
 **What is next**
 - Phase 3: Samsung T9 SSD purchase, GraphRAG, Arize Phoenix
 - Or: Forensics API to complete defensive security lifecycle
+
+### Session 5 continued - April 6, 2026
+
+#### Forensics API and UI - Complete
+
+**forensics_api.py - port 8083**
+- Log analysis with pattern matching - 13 suspicious event types
+- IOC extraction - IPv4, domains, MD5/SHA1/SHA256, emails, URLs, CVEs
+- File hash verification - SHA256 + MD5 with integrity check
+- Timeline reconstruction - chronological event sorting
+- RedSage analysis on every finding
+- CORS enabled for UI
+
+**Forensics.jsx - UI component**
+- Log Analysis tab - paste logs, get findings, IOCs, RedSage analysis
+- IOC Extractor tab - extract indicators from any text
+- File Hash tab - compute and verify file integrity
+- Risk banner - CLEAN/LOW/MEDIUM/HIGH/CRITICAL
+- Color coded findings by severity
+- IOC tags rendered as pills
+
+**Confirmed working end to end**
+- Full attack chain detected: brute force, root login, wget malware,
+  netcat reverse shell, /etc/passwd access, payload execution
+- Risk level: CRITICAL
+- IOCs extracted: 2 IPs, 1 domain, 1 URL
+- RedSage identified C2 compromise and gave remediation steps
+
+**NISA UI now has 4 tabs**
+- Chat, Security, Forensics, Compliance
