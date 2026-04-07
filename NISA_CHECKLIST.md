@@ -1,6 +1,6 @@
-# NISA Build Checklist — Version 5.0
+# NISA Build Checklist — Version 6.0
 Last Updated: April 7, 2026
-Current Status: Phase 2 complete, Phase 3 ready
+Current Status: Phase 2 complete + Red Team suite, Phase 3 ready
 
 WEEK 1 — Foundation COMPLETE
 [x] macOS setup, Xcode, Homebrew, Python 3.11, Git, Node, CMake
@@ -44,7 +44,7 @@ WEEKS 5-6 — Intelligence Core COMPLETE
 [x] nlu_api.py - FastAPI router port 8081
 [x] Intelligent routing - security/reasoning/general/MoA
 [x] moa_pipeline.py - Mixture of Agents
-[x] memory.py - ChromaDB persistent memory (164 entries)
+[x] memory.py - ChromaDB persistent memory (164+ entries)
 [x] audit_trail.py - HMAC-SHA256 cryptographic logging
 [x] NLU API integrates memory + MoA + audit trail
 [x] Arize Phoenix observability - LLM tracing on every request
@@ -65,27 +65,39 @@ PHASE 2 — Cybersecurity Platform COMPLETE
     [x] RedSage analysis on every finding
 [x] PyRIT 0.12.0 - adversarial red team - 4/4 defended (100%)
 [x] OWASP LLM Top 10 evaluation - 50 cases, 81% score
-[x] Garak 0.14.1 installed (CLI bookmarked)
+[x] Garak 0.14.1 - CLI integration working
+    [x] REST generator config established
+    [x] DAN probe baseline: DC-2, 9% defense score (false positive heavy)
+    [x] HTML report generation confirmed
 [x] Compliance PDF generator - ReportLab, pulls from audit_log2
 [x] Arize Phoenix - LLM observability on port 6006
 [x] Tagged v0.2.0
 
-REACT WEB UI COMPLETE
-[x] Vite + React scaffold
-[x] Tailwind CSS, axios, react-router-dom, lucide-react
+RED TEAM SUITE COMPLETE
+[x] red_team_api.py - FastAPI port 8084
+[x] red_team_sessions table in PostgreSQL
+[x] PyRIT attack runner - multi-turn adversarial sequences
+[x] OWASP attack runner - full 50-case suite
+[x] Garak attack runner - DAN + encoding probes
+[x] Live session polling - turn-by-turn results
+[x] Session history - all runs stored in PostgreSQL
+[x] Regression history endpoint - by version
+
+REACT WEB UI COMPLETE - 6 TABS
+[x] Vite + React, Tailwind CSS, recharts, react-markdown
 [x] Dark navy theme, gold accents, subtle grid background
 [x] Rajdhani + JetBrains Mono + Outfit font stack
-[x] App.jsx - shell, header, sidebar, API status dots
-[x] Chat.jsx - Nisaba chat with model indicator and MoA badge
-[x] Security.jsx - Nmap + ZAP scan panels with RedSage analysis
-[x] Forensics.jsx - log analysis, IOC extractor, file hash
-[x] Memory.jsx - ChromaDB explorer with semantic search
-[x] Compliance.jsx - audit log table + PDF generation
+[x] Chat - markdown rendering, syntax highlighting, copy button
+[x] Security - Nmap + ZAP scan panels with RedSage analysis
+[x] Forensics - log analysis, IOC extractor, file hash
+[x] Memory - ChromaDB explorer with semantic search
+[x] Red Team - launch panel, live feed, history, regression chart
+[x] Compliance - audit log table + PDF generation
+[x] 5 API status dots in header
 [x] CORS fixed on all APIs
 
 SESSION TOOLING COMPLETE
-[x] scripts/start_nisa.sh - one command startup
-    Starts: Docker, NLU API, Security API, Forensics API, Phoenix
+[x] scripts/start_nisa.sh - one command startup (7 services)
 [x] logs/ directory for all API logs
 
 PHASE 3 — Knowledge Graph and Automation NEXT
@@ -93,6 +105,8 @@ PHASE 3 — Knowledge Graph and Automation NEXT
 [ ] Deploy Neo4j on external SSD
 [ ] Install GraphRAG - pip install graphrag
 [ ] Write knowledge/watcher.py - file auto-ingestion
+[ ] Build security knowledge library (CVEs, NIST, OWASP docs)
+[ ] Build radar/EW knowledge library (IEEE papers, standards)
 [ ] Implement multi-hop forensic search
 [ ] Configure Arize Phoenix semantic drift monitoring
 [ ] Install AnythingLLM - self-hosted RAG interface
@@ -114,9 +128,9 @@ PHASE 4 — Radar and Electronic Warfare
 
 BOOKMARKED ITEMS
 - TTS PortAudio conflict - Medium priority
-- Garak 0.14.1 CLI config - resume at 0.14.2
 - Kali Linux container - deferred
 - audit_log table - use audit_log2 only
+- Garak DAN false positive rate - needs custom detector
 
 INFRASTRUCTURE PORTS
 Service         Port    Status
@@ -124,6 +138,7 @@ LM Studio       1234    Manual (open app)
 NLU API         8081    Auto (start_nisa.sh)
 Security API    8082    Auto (start_nisa.sh)
 Forensics API   8083    Auto (start_nisa.sh)
+Red Team API    8084    Auto (start_nisa.sh)
 PostgreSQL      5432    Auto (Docker)
 ChromaDB        8000    Auto (Docker)
 Redis           6379    Auto (Docker)
@@ -136,7 +151,7 @@ WHAT NISA CAN DO RIGHT NOW
 Capability                          Status
 Intelligent model routing (5)       WORKING
 Mixture of Agents reasoning         WORKING
-Persistent memory (164 entries)     WORKING
+Persistent memory (164+ entries)    WORKING
 Cryptographic audit trail           WORKING
 Voice STT                           WORKING
 Voice TTS                           BOOKMARKED
@@ -145,16 +160,18 @@ OWASP ZAP web scanning              WORKING
 JIT security permissions            WORKING
 PyRIT adversarial red team          WORKING - 100% defended
 OWASP LLM Top 10 evaluation         WORKING - 81% score
+Garak vulnerability scanning        WORKING - CLI integrated
 RedSage security analysis           WORKING - all scans
 Forensics log analysis              WORKING - CRITICAL detection
 IOC extraction                      WORKING
 File hash verification              WORKING
 Arize Phoenix observability         WORKING
 Memory Explorer UI                  WORKING - semantic search
+Red Team Operations UI              WORKING - live feed + regression
 Compliance PDF reports              WORKING
-React Web UI (5 tabs)               WORKING
-One command startup                 WORKING
+React Web UI (6 tabs)               WORKING
+One command startup (7 services)    WORKING
 
-NISA Build Checklist v5.0
+NISA Build Checklist v6.0
 github.com/jdavis-nisa/NISA
 Built by Josh Davis - Huntsville, Alabama - 2026
