@@ -257,6 +257,125 @@ def extract_iocs(text: str) -> dict:
             results[ioc_type] = matches[:50]
     return results
 
+import subprocess as _subprocess
+
+class PcapRequest(BaseModel):
+    pcap_path: str
+    max_packets: Optional[int] = 1000
+
+@app.post("/analyze/pcap")
+def analyze_pcap(req: PcapRequest):
+    """Analyze a pcap file with tshark - extract connections, IOCs, anomalies"""
+    if not os.path.exists(req.pcap_path):
+        raise HTTPException(status_code=404, detail=f"File not found: {req.pcap_path}")
+
+    try:
+        # Get packet summary
+        result = _subprocess.run([
+            "tshark", "-r", req.pcap_path,
+            "-T", "fields",
+            "-e", "frame.number",
+            "-e", "frame.time_relative",
+            "-e", "ip.src",
+            "-e", "ip.dst",
+            "-e", "tcp.srcport",
+            "-e", "tcp.dstport",
+            "-e", "udp.srcport",
+            "-e", "udp.dstport",
+            "-e", "_ws.col.Protocol",
+            "-e", "_ws.col.Info",
+            "-c", str(req.max_packets)
+        ], capture_output=True, text=True, timeout=60)
+
+        packets = []
+        connections = {}
+        src_ips = set()
+        dst_ips = set()
+
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 4:
+                src_ip = parts[2] if len(parts) > 2 else ""
+                dst_ip = parts[3] if len(parts) > 3 else ""
+                protocol = parts[8] if len(parts) > 8 else ""
+                info = parts[9] if len(parts) > 9 else ""
+
+                if src_ip:
+                    src_ips.add(src_ip)
+                if dst_ip:
+                    dst_ips.add(dst_ip)
+
+                conn_key = f"{src_ip}->{dst_ip}"
+                if conn_key not in connections:
+                    connections[conn_key] = {"count": 0, "protocol": protocol}
+                connections[conn_key]["count"] += 1
+
+                packets.append({
+                    "frame": parts[0],
+                    "time": parts[1] if len(parts) > 1 else "",
+                    "src": src_ip,
+                    "dst": dst_ip,
+                    "protocol": protocol,
+                    "info": info[:100]
+                })
+
+        # Get protocol stats
+        proto_result = _subprocess.run([
+            "tshark", "-r", req.pcap_path, "-q", "-z", "io,phs"
+        ], capture_output=True, text=True, timeout=30)
+
+        # Extract IOCs
+        all_text = " ".join([p.get("info", "") for p in packets])
+        all_text += " " + " ".join(src_ips) + " " + " ".join(dst_ips)
+        iocs = extract_iocs(all_text)
+
+        # Find suspicious connections (high packet count, unusual ports)
+        suspicious = []
+        for conn, data in connections.items():
+            if data["count"] > 50:
+                suspicious.append({
+                    "connection": conn,
+                    "packet_count": data["count"],
+                    "protocol": data["protocol"],
+                    "reason": "HIGH_VOLUME"
+                })
+
+        total_packets = len(packets)
+        unique_src = len(src_ips)
+        unique_dst = len(dst_ips)
+        summary = (
+            f"Analyzed {total_packets} packets. "
+            f"{unique_src} source IPs, {unique_dst} destination IPs. "
+            f"{len(suspicious)} suspicious connections detected."
+        )
+
+        analysis_data = f"Packets: {total_packets}, Connections: {len(connections)}, Suspicious: {suspicious[:5]}, IOCs: {iocs}"
+        analysis = redsage_analyze("Network pcap forensic analysis", analysis_data)
+
+        return {
+            "pcap_path": req.pcap_path,
+            "total_packets": total_packets,
+            "unique_src_ips": list(src_ips)[:20],
+            "unique_dst_ips": list(dst_ips)[:20],
+            "top_connections": sorted(
+                connections.items(),
+                key=lambda x: x[1]["count"],
+                reverse=True
+            )[:10],
+            "suspicious": suspicious,
+            "iocs": iocs,
+            "summary": summary,
+            "analysis": analysis,
+            "protocol_stats": proto_result.stdout[:1000]
+        }
+
+    except _subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="tshark analysis timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8083)
