@@ -9,8 +9,39 @@ import uuid
 import urllib.request
 import urllib.parse
 import json
+from openai import OpenAI
 
 app = FastAPI(title="NISA Security API", version="0.2.0")
+
+# ── RedSage LLM Client ───────────────────────────────────────────
+llm = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
+
+def redsage_analyze(context: str, data: str) -> str:
+    """Route security analysis through RedSage 8B specialist model"""
+    try:
+        completion = llm.chat.completions.create(
+            model="redsage-qwen3-8b-dpo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are RedSage, a cybersecurity specialist. "
+                        "Analyze the provided security scan data concisely. "
+                        "Identify risks, notable findings, and recommended actions. "
+                        "Be direct and technical. Keep response under 200 words."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"{context}\n\nScan Data:\n{data}"
+                }
+            ],
+            max_tokens=300,
+            temperature=0.2
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"RedSage analysis unavailable: {str(e)}"
 
 # ── JIT Token Store ──────────────────────────────────────────────
 active_tokens = {}
@@ -70,6 +101,7 @@ class ScanResponse(BaseModel):
     results: str
     ports: list
     summary: str
+    analysis: str = ""
 
 class ZapScanRequest(BaseModel):
     target: str
@@ -80,6 +112,7 @@ class ZapScanResponse(BaseModel):
     risk_counts: dict
     total_alerts: int
     summary: str
+    analysis: str = ""
 
 # ── Endpoints ────────────────────────────────────────────────────
 @app.get("/health")
@@ -132,7 +165,12 @@ def nmap_scan(req: ScanRequest, token: str):
                     })
 
         summary = f"Scan of {req.target} complete. Found {len(ports)} open ports."
-        return ScanResponse(target=req.target, results=output, ports=ports, summary=summary)
+        analysis = redsage_analyze(
+            f"Nmap scan of {req.target} ({req.scan_type})",
+            f"Open ports: {ports}\n\nFull output:\n{output[:1000]}"
+        )
+        return ScanResponse(target=req.target, results=output, ports=ports,
+                           summary=summary, analysis=analysis)
 
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Scan timed out")
@@ -194,12 +232,17 @@ def zap_scan(req: ZapScanRequest, token: str):
             f"Info: {risk_counts['Informational']}."
         )
 
+        analysis = redsage_analyze(
+            f"OWASP ZAP scan of {target}",
+            f"Risk counts: {risk_counts}\nAlerts: {clean_alerts[:5]}"
+        )
         return ZapScanResponse(
             target=target,
             alerts=clean_alerts,
             risk_counts=risk_counts,
             total_alerts=total,
-            summary=summary
+            summary=summary,
+            analysis=analysis
         )
 
     except Exception as e:
