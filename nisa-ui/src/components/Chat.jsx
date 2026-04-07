@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, Cpu, Zap, Brain, Copy, Check } from "lucide-react"
+import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff } from "lucide-react"
 import axios from "axios"
 import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -25,6 +25,47 @@ export default function Chat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  const [recording, setRecording] = useState(false)
+  const [mediaRecorder, setMediaRecorder] = useState(null)
+
+  const startVoice = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks = []
+      recorder.ondataavailable = e => chunks.push(e.data)
+      recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" })
+        const formData = new FormData()
+        formData.append("audio", blob, "voice.webm")
+        try {
+          const res = await axios.post(`${NLU_API}/voice`, formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+          })
+          if (res.data.transcript) {
+            setInput(res.data.transcript)
+          }
+        } catch (e) {
+          console.error("Voice transcription failed:", e)
+        }
+        stream.getTracks().forEach(t => t.stop())
+        setRecording(false)
+      }
+      recorder.start()
+      setMediaRecorder(recorder)
+      setRecording(true)
+    } catch (e) {
+      console.error("Microphone access denied:", e)
+    }
+  }
+
+  const stopVoice = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop()
+      setMediaRecorder(null)
+    }
+  }
 
   const send = async () => {
     const text = input.trim()
@@ -111,6 +152,22 @@ export default function Chat() {
             lineHeight: "1.5",
           }}
         />
+        <button
+          onClick={recording ? stopVoice : startVoice}
+          style={{
+            padding: "14px 12px",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: recording ? "var(--danger)" : "var(--text-dim)",
+            transition: "color 0.2s",
+            display: "flex",
+            alignItems: "center",
+          }}
+          title={recording ? "Stop recording" : "Start voice input"}
+        >
+          {recording ? <MicOff size={16} /> : <Mic size={16} />}
+        </button>
         <button
           onClick={send}
           disabled={loading || !input.trim()}

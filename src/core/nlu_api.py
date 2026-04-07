@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from openai import OpenAI
 from typing import Optional
@@ -279,6 +280,47 @@ def search_memory(request: MemorySearchRequest):
         return {"results": entries}
     except Exception as e:
         return {"results": [], "error": str(e)}
+
+@app.post("/voice")
+async def voice_input(audio: UploadFile = File(...)):
+    """Accept audio file, transcribe with Whisper, return transcript"""
+    import tempfile
+    import subprocess as sp
+    try:
+        # Save uploaded audio to temp file
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+            tmp.write(await audio.read())
+            tmp_path = tmp.name
+
+        # Convert to wav using ffmpeg
+        wav_path = tmp_path.replace(".webm", ".wav")
+        sp.run([
+            "ffmpeg", "-i", tmp_path, "-ar", "16000",
+            "-ac", "1", "-y", wav_path
+        ], capture_output=True)
+
+        # Transcribe with Whisper
+        whisper_model = os.path.expanduser("~/NISA/models/whisper/ggml-base.en.bin")
+        result = sp.run([
+            "/opt/homebrew/bin/whisper-cli",
+            "--model", whisper_model,
+            "--file", wav_path,
+            "--no-timestamps",
+            "--language", "en"
+        ], capture_output=True, text=True)
+
+        lines = [l.strip() for l in result.stdout.split("\n")
+                 if l.strip() and not l.strip().startswith("[")]
+        transcript = " ".join(lines).strip()
+
+        # Cleanup
+        for f in [tmp_path, wav_path]:
+            if os.path.exists(f):
+                os.unlink(f)
+
+        return {"transcript": transcript, "status": "ok"}
+    except Exception as e:
+        return {"transcript": "", "status": "error", "error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8081)
