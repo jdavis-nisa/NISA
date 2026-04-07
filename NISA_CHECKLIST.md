@@ -1,6 +1,6 @@
-# NISA Build Checklist — Version 6.1
+# NISA Build Checklist — Version 7.0
 Last Updated: April 7, 2026
-Current Status: Phase 2 complete + Red Team suite + Voice, Phase 3 ready
+Current Status: Phase 3 in progress - knowledge graph + tool expansion
 
 WEEK 1 — Foundation COMPLETE
 [x] macOS setup, Xcode, Homebrew, Python 3.11, Git, Node, CMake
@@ -100,17 +100,37 @@ SESSION TOOLING COMPLETE
 [x] scripts/start_nisa.sh - one command startup (7 services)
 [x] logs/ directory for all API logs
 
-PHASE 3 — Knowledge Graph and Automation NEXT
-[ ] Purchase Samsung T9 2TB external SSD (~$130)
+PHASE 3 — Knowledge Graph, Automation, and Tool Expansion NEXT
+
+Knowledge Graph and RAG
+[ ] Format and mount Samsung T9 2TB external SSD
 [ ] Deploy Neo4j on external SSD
 [ ] Install GraphRAG - pip install graphrag
 [ ] Write knowledge/watcher.py - file auto-ingestion
-[ ] Build security knowledge library (CVEs, NIST, OWASP docs)
-[ ] Build radar/EW knowledge library (IEEE papers, standards)
+[ ] Build security knowledge library (CVEs, NIST, OWASP docs, IEEE papers)
+[ ] Build radar/EW knowledge library (IEEE papers, waveform standards)
+[ ] Build music library on SSD
 [ ] Implement multi-hop forensic search
 [ ] Configure Arize Phoenix semantic drift monitoring
 [ ] Install AnythingLLM - self-hosted RAG interface
 [ ] Build task scheduler and learning engine
+
+Security Tool Expansion
+[ ] Add tshark/Wireshark pcap analysis to forensics_api.py
+[ ] Deploy Suricata IDS container - live network threat detection
+[ ] Wire Suricata alerts into NISA UI
+[ ] Install Burp Suite community edition - replace ZAP as primary web scanner
+[ ] Deploy Kali Linux container
+[ ] Install Metasploit Framework in Kali container (authorized targets only)
+[ ] Add UI voice activation button - microphone toggle in Chat tab
+
+Cryptography Upgrade
+[ ] Research CRYSTALS-Dilithium and FALCON post-quantum signing
+[ ] Replace HMAC-SHA256 audit trail with quantum-resistant algorithm
+[ ] Document quantum-resistant cryptography in AIBOM
+[ ] Update compliance PDF to reflect new signing algorithm
+
+Fine-tuning and Mobile
 [ ] Begin fine-tuning dataset collection
 [ ] Fine-tune Phi-4 14B on security domain via MLX-LM LoRA
 [ ] React Native mobile app
