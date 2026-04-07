@@ -1,0 +1,39 @@
+services:
+
+  kali:
+    image: kalilinux/kali-rolling
+    container_name: nisa_kali
+    stdin_open: true
+    tty: true
+    network_mode: "host"
+    volumes:
+      - kali_data:/root
+      - ~/NISA/src/security/scripts:/scripts
+    restart: unless-stopped
+    command: /bin/bash -c "apt-get update -qq && tail -f /dev/null"
+
+  nmap:
+    image: instrumentisto/nmap
+    container_name: nisa_nmap
+    network_mode: "host"
+    restart: unless-stopped
+    entrypoint: ["tail", "-f", "/dev/null"]
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: nisa_zap
+    ports:
+      - "8090:8080"
+    volumes:
+      - zap_data:/zap/wrk
+    restart: unless-stopped
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080
+      -config api.addrs.addr.name=.*
+      -config api.addrs.addr.regex=true
+      -config api.key=nisa_zap_key_2026
+
+volumes:
+  kali_data:
+    driver: local
+  zap_data:
+    driver: local
