@@ -789,3 +789,142 @@ REMAINING:
 6. Terminal commands reference document
 7. Electron desktop app
 8. Demo video prep
+
+---
+
+## Session 8 — April 8, 2026 (Thread 3)
+
+### System Startup and Infrastructure
+
+#### Visualization API Added to start_nisa.sh
+- Port 8087 added as Step 9/11 in start script
+- Suricata IDS API (8085) and Remediation API (8086) also added to start script
+- Step numbering corrected throughout: 1-11
+- Summary banner updated with all service URLs
+- All 11 services confirmed online on first run
+
+#### Full System Status at Session Start
+- 5 Docker containers running (postgres, redis, chromadb, nmap, zap)
+- All 8 APIs online: NLU 8081, Security 8082, Forensics 8083, Red Team 8084,
+  Suricata 8085, Remediation 8086, Visualization 8087, Phoenix 6006
+- UI confirmed healthy at localhost:5173
+- Neo4j Desktop running - NISA instance created successfully
+- ChromaDB memories: 1,033+ entries
+- Scraper file count verified: 207 files across 18 domains
+
+---
+
+### Knowledge Library Expansion
+
+#### 7 New Knowledge Domains Added and Populated
+New domains created on SSD and scraped:
+- gardening (14 files) - zone 7b, raised bed, container, in-ground, companion planting,
+  permaculture, medicinal herbs, native plants, food forest, seed saving
+- creative_writing (16 files) - supernatural/thriller/mystery/romance/sci-fi,
+  Poe, Lovecraft, Dracula, Frankenstein, Sherlock Holmes, narrative structure,
+  screenwriting, character development, world building, mythology/Campbell
+- social_dynamics (12 files) - persuasion, negotiation, rapport, emotional intelligence,
+  rhetoric, conflict resolution, power dynamics, cultural intelligence
+- health (12 files) - Gray's Anatomy, anatomy/physiology, trauma medicine, mental health/PTSD,
+  nutrition, exercise science, sleep science, stress physiology, longevity, gut health
+- music (10 files) - hip hop lyricism/flow/rhyme, music theory, beat production,
+  rhythm/meter, rap culture/history, vocal delivery, sound design, songwriting
+- resume_career (6 files) - AI security careers, cybersecurity workforce, defense contractor,
+  technical interview, veterans in tech, portfolio building
+- research (6 files) - research methodology, technical writing, data analysis,
+  literature review, experimental design, signal processing research
+
+#### 5 Advanced Knowledge Domains Added
+New advanced domains created and partially populated (ArXiv rate limiting):
+- mathematics_advanced (14 sources) - real analysis, algebraic geometry, topology,
+  discrete math, functional analysis, algebraic topology, differential geometry,
+  combinatorics, applied math (signal processing + AI), linear algebra, statistics
+- physics_advanced (14 sources) - applied physics, gravity, propulsion, electromagnetics,
+  wave propagation, quantum mechanics, string theory, QFT, statistical mechanics,
+  classical mechanics, relativity, cosmology, plasma physics, condensed matter
+- quantum_advanced (10 sources) - quantum sensing, quantum radar, quantum lidar,
+  quantum communication, quantum algorithms, error correction, quantum defense,
+  entanglement, photonic quantum computing, quantum AI/ML
+- writing_craft (10 sources) - Strunk and White, Aristotle Poetics, writing craft,
+  grammar/linguistics, rhetoric, technical documentation, narrative voice,
+  editing/revision, publishing industry
+- spiritual_advanced (20 sources) - consciousness science, Gateway Experience,
+  remote viewing, astral projection, transcendental meditation, breathwork,
+  lucid dreaming, UAP research, cryptozoology, world religions (Islam, Christianity,
+  Buddhism, Hinduism, indigenous spirituality), NDE, guided meditation,
+  psychedelics and consciousness, Quran, Bible KJV
+
+#### Knowledge Library Final State
+- Total domains: 39
+- Total files: 300+ (scraper still running for spiritual_advanced and partial domains)
+- SSD base: /Volumes/Share Drive/NISA/knowledge/
+
+---
+
+### Signal Processing Sandbox - Complete
+
+#### GNU Octave 11.1.0 Installed
+- brew install octave - native Apple Silicon (aarch64)
+- octave-signal package installed (1.4.7) with control dependency (4.2.1)
+- Confirmed working: chirp, fft, filter functions all operational
+
+#### Signal Processing API - Port 8088
+- src/core/signal_api.py built with FastAPI on port 8088
+- Endpoints:
+  - /waveform - generate and plot waveforms (sine, chirp, LFM, pulse, Barker)
+  - /fft - compute and plot FFT with time+frequency dual panel
+  - /filter - design Butterworth filters (lowpass, highpass, bandpass, bandstop)
+  - /ambiguity - compute ambiguity function for radar waveform analysis
+  - /octave - execute arbitrary GNU Octave/MATLAB code locally
+  - /waveform_types - list available waveform types
+- All plots generated in NISA dark gold theme (matplotlib Agg backend)
+- Images returned as base64 PNG for UI rendering
+- Added to start_nisa.sh as Step 10/11
+
+#### SIGNAL Tab Added to UI
+- nisa-ui/src/components/Signal.jsx - 5 sub-tabs
+  - WAVEFORM - generate LFM, chirp, sine, pulse, Barker waveforms with plots
+  - FFT ANALYSIS - dual panel time+frequency domain analysis
+  - FILTER DESIGN - Butterworth filter frequency response visualization
+  - AMBIGUITY - range/Doppler ambiguity function (2D contour plot)
+  - OCTAVE - full GNU Octave sandbox with MATLAB-compatible code execution
+- Default Octave script demonstrates LFM chirp generation and FFT analysis
+- Signal API status dot added to header
+- Version bumped to v0.3.0 in UI
+
+#### Bugs Fixed
+- Matplotlib font cache caused 10+ minute hang on first startup - resolved on second run
+- Octave printf with \n caused syntax error - replaced with disp()
+- chirp function undefined - fixed by adding pkg load signal to default script
+
+---
+
+### Demo Script Created
+Comprehensive 20-minute demo script written for:
+- Dad meeting (radar engineer context - Signal tab featured prominently)
+- Prospective employer demos (Leidos, Boeing, SAIC, Northrop, Booz Allen)
+- Detailed field-by-field instructions for every tab
+- Explanation of Signal tab capabilities in radar engineering context
+- Explanation of Signal tab applications to cybersecurity
+
+---
+
+### Session Stats
+- APIs running: 11 (added Signal Processing 8088)
+- UI tabs: 9 (Chat, Security, Forensics, Memory, Red Team, Remediation, Visualize, Compliance, Signal)
+- Knowledge domains: 39
+- Knowledge files: 300+
+- New git commits this session: 8+
+- Octave packages installed: control 4.2.1, signal 1.4.7
+
+---
+
+### What's Next
+1. Dad meeting - radar papers and programs to SSD (HIGHEST PRIORITY)
+2. Re-run scraper for spiritual_advanced remaining sources (ArXiv rate limit)
+3. Security hardening and access audit - close open ports, add API authentication
+4. Electron desktop app - wrap NISA UI as native Mac app
+5. Demo video prep - script and shot list
+6. Fine-tune Phi-4 after knowledge library fully populated
+7. Kali Linux Docker + Metasploit
+8. React Native mobile app
