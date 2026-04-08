@@ -4,6 +4,7 @@ import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair } f
 import Chat from "./components/Chat"
 import Security from "./components/Security"
 import Compliance from "./components/Compliance"
+import Remediation from "./components/Remediation"
 import Forensics from "./components/Forensics"
 import Memory from "./components/Memory"
 import RedTeam from "./components/RedTeam"
@@ -22,6 +23,7 @@ function App() {
               <Route path="/forensics" element={<Forensics />} />
               <Route path="/memory" element={<Memory />} />
               <Route path="/redteam" element={<RedTeam />} />
+              <Route path="/remediation" element={<Remediation />} />
               <Route path="/compliance" element={<Compliance />} />
             </Routes>
           </main>
@@ -125,6 +127,7 @@ function Sidebar() {
     { to: "/forensics", icon: Search, label: "FORENSICS", sublabel: "Log Analysis & IOC" },
     { to: "/memory", icon: Brain, label: "MEMORY", sublabel: "ChromaDB Explorer" },
     { to: "/redteam", icon: Crosshair, label: "RED TEAM", sublabel: "Attack & Evaluate" },
+    { to: "/remediation", icon: Shield, label: "REMEDIATION", sublabel: "Patch & Verify" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
   ]
   return (

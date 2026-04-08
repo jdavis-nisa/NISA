@@ -1,0 +1,371 @@
+import { useState } from "react"
+import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
+import axios from "axios"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
+
+const REM_API = "http://localhost:8086"
+
+const panelStyle = {
+  background: "var(--bg-secondary)",
+  border: "1px solid var(--border)",
+  borderRadius: "4px",
+  padding: "16px",
+  marginBottom: "16px",
+}
+
+const labelStyle = {
+  fontFamily: "Rajdhani, sans-serif",
+  fontWeight: 600,
+  fontSize: "10px",
+  letterSpacing: "0.15em",
+  color: "var(--text-dim)",
+  marginBottom: "6px",
+  display: "block",
+}
+
+const inputStyle = {
+  width: "100%",
+  background: "var(--bg-primary)",
+  border: "1px solid var(--border)",
+  borderRadius: "2px",
+  padding: "8px 10px",
+  color: "var(--text-primary)",
+  fontFamily: "JetBrains Mono, monospace",
+  fontSize: "12px",
+  outline: "none",
+  boxSizing: "border-box",
+}
+
+const btnStyle = (color = "var(--accent-gold)") => ({
+  padding: "10px 20px",
+  background: "transparent",
+  border: `1px solid ${color}`,
+  borderRadius: "2px",
+  color: color,
+  fontFamily: "Rajdhani, sans-serif",
+  fontWeight: 700,
+  fontSize: "11px",
+  letterSpacing: "0.15em",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+})
+
+export default function Remediation() {
+  const [step, setStep] = useState("authorize")
+  const [session, setSession] = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [applyFile, setApplyFile] = useState("")
+  const [applyResult, setApplyResult] = useState(null)
+  const [applying, setApplying] = useState(false)
+
+  const applyPatch = async () => {
+    if (!applyFile.trim()) return
+    setApplying(true)
+    try {
+      const res = await axios.post(`${REM_API}/apply`, {
+        session_id: session.session_id,
+        remediation_id: result.remediation_id,
+        target_file: applyFile,
+        backup: true
+      })
+      setApplyResult(res.data)
+    } catch (e) {
+      setApplyResult({ error: e.response?.data?.detail || e.message })
+    }
+    setApplying(false)
+  }
+
+  const [authForm, setAuthForm] = useState({
+    target: "",
+    scope: "",
+    authorized_by: "",
+    authorization_date: new Date().toISOString().split("T")[0],
+    engagement_type: "vulnerability_assessment"
+  })
+
+  const [vulnForm, setVulnForm] = useState({
+    vulnerability: "",
+    affected_component: "",
+    language: "python"
+  })
+
+  const authorize = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await axios.post(`${REM_API}/authorize`, authForm)
+      setSession(res.data)
+      setStep("remediate")
+    } catch (e) {
+      setError(e.response?.data?.detail || e.message)
+    }
+    setLoading(false)
+  }
+
+  const remediate = async () => {
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const res = await axios.post(`${REM_API}/remediate`, {
+        session_id: session.session_id,
+        ...vulnForm
+      })
+      setResult(res.data)
+      setStep("results")
+    } catch (e) {
+      setError(e.response?.data?.detail || e.message)
+    }
+    setLoading(false)
+  }
+
+  const reset = () => {
+    setStep("authorize")
+    setSession(null)
+    setResult(null)
+    setError(null)
+    setVulnForm({ vulnerability: "", affected_component: "", language: "python" })
+  }
+
+  const sevColor = { CRITICAL: "var(--danger)", HIGH: "#ff6b35", MEDIUM: "var(--warning)", LOW: "var(--accent-cyan)" }
+
+  return (
+    <div className="fade-in" style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+          <Shield size={20} color="var(--accent-gold)" />
+          <h1 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "24px", letterSpacing: "0.2em", color: "var(--text-primary)", margin: 0 }}>
+            REMEDIATION
+          </h1>
+        </div>
+        <p style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-dim)", margin: 0 }}>
+          Autonomous vulnerability analysis, patch generation, and sandbox testing
+        </p>
+      </div>
+
+      {/* Step indicators */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
+        {[
+          { id: "authorize", label: "01 AUTHORIZE" },
+          { id: "remediate", label: "02 ANALYZE" },
+          { id: "results", label: "03 RESULTS" }
+        ].map(s => (
+          <div key={s.id} style={{
+            padding: "6px 14px",
+            border: `1px solid ${step === s.id ? "var(--accent-gold)" : "var(--border)"}`,
+            borderRadius: "2px",
+            fontFamily: "Rajdhani, sans-serif",
+            fontWeight: 600,
+            fontSize: "10px",
+            letterSpacing: "0.15em",
+            color: step === s.id ? "var(--accent-gold)" : "var(--text-dim)",
+          }}>{s.label}</div>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ ...panelStyle, borderColor: "var(--danger)", marginBottom: "16px" }}>
+          <span style={{ color: "var(--danger)", fontFamily: "JetBrains Mono, monospace", fontSize: "12px" }}>{error}</span>
+        </div>
+      )}
+
+      {step === "authorize" && (
+        <div style={panelStyle}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Lock size={12} /> AUTHORIZATION REQUIRED
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+            {[
+              { key: "target", label: "TARGET (IP/DOMAIN)" },
+              { key: "authorized_by", label: "AUTHORIZED BY" },
+              { key: "authorization_date", label: "AUTHORIZATION DATE", type: "date" },
+              { key: "engagement_type", label: "ENGAGEMENT TYPE" },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={labelStyle}>{f.label}</label>
+                <input
+                  type={f.type || "text"}
+                  value={authForm[f.key]}
+                  onChange={e => setAuthForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={labelStyle}>SCOPE OF ENGAGEMENT</label>
+            <textarea
+              value={authForm.scope}
+              onChange={e => setAuthForm(p => ({ ...p, scope: e.target.value }))}
+              placeholder="Describe the authorized scope of this security assessment..."
+              style={{ ...inputStyle, height: "80px", resize: "vertical" }}
+            />
+          </div>
+          <button onClick={authorize} disabled={loading || !authForm.target || !authForm.authorized_by} style={btnStyle()}>
+            <Lock size={12} />
+            {loading ? "AUTHORIZING..." : "AUTHORIZE ENGAGEMENT"}
+          </button>
+        </div>
+      )}
+
+      {step === "remediate" && session && (
+        <div>
+          <div style={{ ...panelStyle, borderColor: "var(--success)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <CheckCircle size={12} color="var(--success)" />
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--success)" }}>SESSION AUTHORIZED</span>
+            </div>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>
+              Target: {session.target} | Token: {session.authorization_token} | By: {session.message?.split("by ")[1]}
+            </div>
+          </div>
+
+          <div style={panelStyle}>
+            <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "16px" }}>
+              VULNERABILITY DETAILS
+            </div>
+            <div style={{ marginBottom: "12px" }}>
+              <label style={labelStyle}>VULNERABILITY DESCRIPTION</label>
+              <textarea
+                value={vulnForm.vulnerability}
+                onChange={e => setVulnForm(p => ({ ...p, vulnerability: e.target.value }))}
+                placeholder="Describe the vulnerability in detail..."
+                style={{ ...inputStyle, height: "100px", resize: "vertical" }}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div>
+                <label style={labelStyle}>AFFECTED COMPONENT</label>
+                <input value={vulnForm.affected_component} onChange={e => setVulnForm(p => ({ ...p, affected_component: e.target.value }))} style={inputStyle} placeholder="file.py - function_name" />
+              </div>
+              <div>
+                <label style={labelStyle}>LANGUAGE</label>
+                <select value={vulnForm.language} onChange={e => setVulnForm(p => ({ ...p, language: e.target.value }))} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="java">Java</option>
+                  <option value="bash">Bash</option>
+                  <option value="powershell">PowerShell</option>
+                  <option value="go">Go</option>
+                  <option value="rust">Rust</option>
+                  <option value="cpp">C/C++</option>
+                  <option value="ruby">Ruby</option>
+                  <option value="php">PHP</option>
+                  <option value="sql">SQL</option>
+                  <option value="matlab">MATLAB</option>
+                  <option value="r">R</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={remediate} disabled={loading || !vulnForm.vulnerability} style={btnStyle()}>
+              <Play size={12} />
+              {loading ? "ANALYZING & PATCHING..." : "GENERATE PATCH & TEST"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "results" && result && (
+        <div>
+          <div style={{ ...panelStyle, borderColor: sevColor[result.severity] || "var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {result.sandbox_passed ? <CheckCircle size={14} color="var(--success)" /> : <AlertTriangle size={14} color="var(--danger)" />}
+                <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.1em", color: result.sandbox_passed ? "var(--success)" : "var(--danger)" }}>
+                  {result.sandbox_passed ? "SANDBOX PASSED — PATCH VERIFIED" : "SANDBOX FAILED — PATCH NEEDS REVIEW"}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: sevColor[result.severity], border: `1px solid ${sevColor[result.severity]}`, padding: "2px 8px", borderRadius: "2px" }}>
+                  {result.severity}
+                </span>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: "2px" }}>
+                  CVSS {result.cvss_score}
+                </span>
+              </div>
+            </div>
+            <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
+              {result.explanation}
+            </div>
+          </div>
+
+          <div style={panelStyle}>
+            <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "12px" }}>PATCH CODE</div>
+            <SyntaxHighlighter language={result.affected_component?.includes(".py") ? "python" : "text"} style={vscDarkPlus} customStyle={{ borderRadius: "4px", fontSize: "12px" }}>
+              {result.patch_code || "No patch generated"}
+            </SyntaxHighlighter>
+          </div>
+
+          {result.implementation_steps?.length > 0 && (
+            <div style={panelStyle}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "12px" }}>IMPLEMENTATION STEPS</div>
+              {result.implementation_steps.map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--accent-gold)", minWidth: "24px" }}>0{i+1}</span>
+                  <span style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-secondary)" }}>{step}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.references?.length > 0 && (
+            <div style={panelStyle}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "8px" }}>REFERENCES</div>
+              {result.references.map((ref, i) => (
+                <div key={i} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--accent-cyan)", marginBottom: "4px" }}>{ref}</div>
+              ))}
+            </div>
+          )}
+
+          {result.sandbox_passed && (
+            <div style={panelStyle}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--warning)", marginBottom: "12px" }}>
+                ⚠ APPLY PATCH TO FILE (OPTIONAL)
+              </div>
+              <div style={{ marginBottom: "10px" }}>
+                <label style={labelStyle}>TARGET FILE PATH</label>
+                <input value={applyFile} onChange={e => setApplyFile(e.target.value)}
+                  placeholder="/path/to/your/login.py"
+                  style={inputStyle} />
+              </div>
+              <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
+                A backup will be created automatically before applying the patch.
+              </div>
+              <button onClick={applyPatch} disabled={applying || !applyFile.trim()} style={btnStyle("var(--warning)")}>
+                <Play size={12} /> {applying ? "APPLYING..." : "APPLY PATCH TO FILE"}
+              </button>
+              {applyResult && (
+                <div style={{ marginTop: "10px", padding: "10px", background: "var(--bg-primary)", border: `1px solid ${applyResult.error ? "var(--danger)" : "var(--success)"}`, borderRadius: "2px" }}>
+                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: applyResult.error ? "var(--danger)" : "var(--success)" }}>
+                    {applyResult.error || applyResult.message}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button onClick={() => {
+              const url = `${REM_API}/report/${session.session_id}/${result.remediation_id}`
+              window.open(url, "_blank")
+            }} style={btnStyle("var(--success)")}>
+              <Download size={12} /> DOWNLOAD PDF REPORT
+            </button>
+            <button onClick={() => setStep("remediate")} style={btnStyle("var(--accent-cyan)")}>
+              <ChevronRight size={12} /> NEW VULNERABILITY
+            </button>
+            <button onClick={reset} style={btnStyle("var(--text-dim)")}>
+              NEW SESSION
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

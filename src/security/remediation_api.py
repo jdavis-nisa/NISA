@@ -245,6 +245,191 @@ def get_session(session_id: str):
 def list_sessions():
     return {"sessions": list(_sessions.values())}
 
+class ApplyPatchRequest(BaseModel):
+    session_id: str
+    remediation_id: str
+    target_file: str
+    backup: bool = True
+
+@app.post("/apply")
+def apply_patch(req: ApplyPatchRequest):
+    """Apply a tested patch to a target file - requires session authorization"""
+    if req.session_id not in _sessions:
+        raise HTTPException(status_code=403, detail="Invalid session")
+
+    session = _sessions[req.session_id]
+    remediation = next((r for r in session["remediations"] if r["remediation_id"] == req.remediation_id), None)
+
+    if not remediation:
+        raise HTTPException(status_code=404, detail="Remediation not found")
+
+    if not remediation["sandbox_passed"]:
+        raise HTTPException(status_code=400, detail="Cannot apply patch that failed sandbox testing")
+
+    if not os.path.exists(req.target_file):
+        raise HTTPException(status_code=404, detail=f"Target file not found: {req.target_file}")
+
+    try:
+        # Backup original file
+        backup_path = None
+        if req.backup:
+            backup_path = req.target_file + f".backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            with open(req.target_file, "r") as f:
+                original = f.read()
+            with open(backup_path, "w") as f:
+                f.write(original)
+
+        # Apply patch
+        patch_code = remediation["patch_code"]
+        with open(req.target_file, "w") as f:
+            f.write(patch_code)
+
+        return {
+            "status": "applied",
+            "target_file": req.target_file,
+            "backup_path": backup_path,
+            "remediation_id": req.remediation_id,
+            "applied_by": session["authorized_by"],
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": f"Patch applied to {req.target_file}. Backup saved to {backup_path}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/report/{session_id}/{remediation_id}")
+def generate_report(session_id: str, remediation_id: str):
+    """Generate a professional PDF remediation report"""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from fastapi.responses import FileResponse
+    import tempfile
+
+    if session_id not in _sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = _sessions[session_id]
+    remediation = next((r for r in session["remediations"] if r["remediation_id"] == remediation_id), None)
+    if not remediation:
+        raise HTTPException(status_code=404, detail="Remediation not found")
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp.close()
+
+    doc = SimpleDocTemplate(tmp.name, pagesize=letter,
+                            rightMargin=0.75*inch, leftMargin=0.75*inch,
+                            topMargin=0.75*inch, bottomMargin=0.75*inch)
+
+    styles = getSampleStyleSheet()
+    gold = colors.HexColor("#C9A84C")
+    dark = colors.HexColor("#0D1117")
+    danger = colors.HexColor("#FF4444")
+    success = colors.HexColor("#00FF88")
+
+    title_style = ParagraphStyle("title", fontSize=24, fontName="Helvetica-Bold",
+                                  textColor=gold, alignment=TA_CENTER, spaceAfter=4)
+    subtitle_style = ParagraphStyle("subtitle", fontSize=11, fontName="Helvetica",
+                                     textColor=colors.HexColor("#8B9BAA"), alignment=TA_CENTER, spaceAfter=4)
+    section_style = ParagraphStyle("section", fontSize=12, fontName="Helvetica-Bold",
+                                    textColor=gold, spaceBefore=16, spaceAfter=8)
+    body_style = ParagraphStyle("body", fontSize=10, fontName="Helvetica",
+                                 textColor=colors.HexColor("#2D3A4A"), spaceAfter=6, leading=16)
+    code_style = ParagraphStyle("code", fontSize=8, fontName="Courier",
+                                 textColor=colors.HexColor("#2D3A4A"),
+                                 backColor=colors.HexColor("#F5F5F5"),
+                                 spaceAfter=6, leading=12, leftIndent=12)
+
+    story = []
+
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("NISA", title_style))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("Network Intelligence Security Assistant", subtitle_style))
+    story.append(Paragraph("Vulnerability Remediation Report", subtitle_style))
+    story.append(Spacer(1, 12))
+    story.append(HRFlowable(width="100%", thickness=1, color=gold, spaceAfter=16))
+
+    sev_color = {"CRITICAL": danger, "HIGH": colors.HexColor("#FF6B35"),
+                 "MEDIUM": colors.HexColor("#FFA500"), "LOW": colors.HexColor("#00AAFF")}
+
+    meta = [
+        ["Report ID:", remediation["remediation_id"]],
+        ["Generated:", datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")],
+        ["Target:", remediation["target"]],
+        ["Authorized By:", remediation["authorized_by"]],
+        ["Severity:", remediation["severity"]],
+        ["CVSS Score:", str(remediation["cvss_score"])],
+        ["Sandbox Status:", "PASSED" if remediation["sandbox_passed"] else "FAILED"],
+        ["Status:", remediation["status"]],
+    ]
+
+    t = Table(meta, colWidths=[2*inch, 4.5*inch])
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
+        ("FONTNAME", (1,0), (1,-1), "Helvetica"),
+        ("FONTSIZE", (0,0), (-1,-1), 9),
+        ("TEXTCOLOR", (0,0), (0,-1), colors.HexColor("#2D3A4A")),
+        ("TEXTCOLOR", (1,0), (1,-1), colors.HexColor("#2D3A4A")),
+        ("ROWBACKGROUNDS", (0,0), (-1,-1), [colors.HexColor("#F8F9FA"), colors.white]),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#DEE2E6")),
+        ("PADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 16))
+
+    story.append(Paragraph("Vulnerability Description", section_style))
+    story.append(Paragraph(remediation["vulnerability"], body_style))
+    story.append(Paragraph(f"<b>Affected Component:</b> {remediation['affected_component']}", body_style))
+
+    story.append(Paragraph("Analysis", section_style))
+    story.append(Paragraph(remediation.get("explanation", ""), body_style))
+
+    if remediation.get("patch_code"):
+        story.append(Paragraph("Patch Code", section_style))
+        code_lines = remediation["patch_code"].replace("\\n", "\n").split("\n")
+        for line in code_lines[:50]:
+            story.append(Paragraph(line.replace(" ", "&nbsp;") or "&nbsp;", code_style))
+
+    if remediation.get("implementation_steps"):
+        story.append(Paragraph("Implementation Steps", section_style))
+        for i, step in enumerate(remediation["implementation_steps"]):
+            story.append(Paragraph(f"{i+1}. {step}", body_style))
+
+    if remediation.get("references"):
+        story.append(Paragraph("References", section_style))
+        for ref in remediation["references"]:
+            story.append(Paragraph(f"• {ref}", body_style))
+
+    sandbox_color = success if remediation["sandbox_passed"] else danger
+    story.append(Paragraph("Sandbox Test Results", section_style))
+    story.append(Paragraph(
+        f"Status: {'PASSED' if remediation['sandbox_passed'] else 'FAILED'}",
+        ParagraphStyle("sandbox", fontSize=10, fontName="Helvetica-Bold",
+                       textColor=sandbox_color, spaceAfter=6)
+    ))
+    if remediation.get("sandbox_output"):
+        story.append(Paragraph(remediation["sandbox_output"][:500], code_style))
+
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#DEE2E6"), spaceBefore=16))
+    story.append(Paragraph(
+        "This report was automatically generated by NISA - Network Intelligence Security Assistant. "
+        "All patches are tested in an isolated sandbox environment before presentation. "
+        f"Authorized by {remediation['authorized_by']} on {remediation['timestamp'][:10]}.",
+        ParagraphStyle("footer", fontSize=8, fontName="Helvetica",
+                       textColor=colors.HexColor("#8B9BAA"), alignment=TA_CENTER)
+    ))
+
+    doc.build(story)
+
+    return FileResponse(
+        tmp.name,
+        media_type="application/pdf",
+        filename=f"NISA_Remediation_{remediation_id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8086)
