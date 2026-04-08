@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom"
+import { HashRouter, Routes, Route, NavLink } from "react-router-dom"
 import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2 } from "lucide-react"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
@@ -14,7 +14,7 @@ import Metasploit from "./components/Metasploit"
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <Header />
         <div style={{ display: "flex", flex: 1 }}>
@@ -35,7 +35,7 @@ function App() {
           </main>
         </div>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
