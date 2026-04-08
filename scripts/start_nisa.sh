@@ -115,8 +115,20 @@ else
     echo "       Visualization API failed to start - check logs/viz_api.log"
 fi
 
-# ── Step 10: Phoenix ──────────────────────────────────────────────
-echo "[ 10/10 ] Starting Arize Phoenix (port 6006)..."
+# ── Step 10: Signal Processing API ──────────────────────────────
+echo "[ 10/11 ] Starting Signal Processing API (port 8088)..."
+lsof -ti:8088 | xargs kill -9 2>/dev/null || true
+python3.11 "/src/core/signal_api.py" > "/logs/signal_api.log" 2>&1 &
+SIG_PID=70647
+sleep 3
+if curl -s http://localhost:8088/health > /dev/null 2>&1; then
+    echo "       Signal Processing API online - PID $SIG_PID"
+else
+    echo "       Signal Processing API failed to start - check logs/signal_api.log"
+fi
+
+# ── Step 11: Phoenix ──────────────────────────────────────────────
+echo "[ 11/11 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5
@@ -138,6 +150,7 @@ echo "║  Red Team     http://localhost:8084      ║"
 echo "║  Suricata IDS http://localhost:8085      ║"
 echo "║  Remediation  http://localhost:8086      ║"
 echo "║  Visualize    http://localhost:8087      ║"
+echo "║  Signal Proc  http://localhost:8088      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"
