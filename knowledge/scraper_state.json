@@ -1,144 +1,500 @@
 {
   "scraped": {
+    "1ee0257d": {
+      "name": "NIST_NVD_CVE",
+      "ts": "2026-04-07T23:34:35.800230"
+    },
+    "64fb9124": {
+      "name": "MITRE_ATTACK",
+      "ts": "2026-04-07T23:34:41.509321"
+    },
+    "fde531cd": {
+      "name": "OWASP_Testing_Guide",
+      "ts": "2026-04-07T23:34:45.771512"
+    },
+    "3bec8a08": {
+      "name": "ArXiv_Malware",
+      "ts": "2026-04-07T23:34:47.957055"
+    },
+    "1e104093": {
+      "name": "ArXiv_Intrusion_Detection",
+      "ts": "2026-04-07T23:34:50.095429"
+    },
+    "ebe98833": {
+      "name": "ArXiv_Vulnerability",
+      "ts": "2026-04-07T23:34:52.248026"
+    },
+    "d95e4467": {
+      "name": "ArXiv_ZeroTrust",
+      "ts": "2026-04-07T23:34:54.387897"
+    },
+    "bb0d399a": {
+      "name": "ArXiv_AI_Security",
+      "ts": "2026-04-07T23:34:56.529778"
+    },
+    "6bf9c273": {
+      "name": "NASA_Radar",
+      "ts": "2026-04-07T23:35:02.045410"
+    },
+    "520dfe9e": {
+      "name": "ArXiv_Radar_ML",
+      "ts": "2026-04-07T23:35:04.178191"
+    },
+    "59a8393c": {
+      "name": "ArXiv_Signal_Processing",
+      "ts": "2026-04-07T23:35:06.309627"
+    },
+    "55371dfb": {
+      "name": "ArXiv_Antenna",
+      "ts": "2026-04-07T23:35:08.508206"
+    },
+    "511acb8d": {
+      "name": "ArXiv_SAR",
+      "ts": "2026-04-07T23:35:10.646950"
+    },
+    "90e736da": {
+      "name": "ArXiv_Physics_Survey",
+      "ts": "2026-04-07T23:35:17.591150"
+    },
+    "d03452e6": {
+      "name": "ArXiv_QM_Survey",
+      "ts": "2026-04-07T23:35:19.727658"
+    },
+    "09e910b4": {
+      "name": "ArXiv_Electromagnetism",
+      "ts": "2026-04-07T23:35:21.848063"
+    },
+    "59958664": {
+      "name": "ArXiv_Relativity",
+      "ts": "2026-04-07T23:35:23.974321"
+    },
+    "df587225": {
+      "name": "ArXiv_NuclearPhysics",
+      "ts": "2026-04-07T23:35:26.088099"
+    },
+    "e97aede8": {
+      "name": "ArXiv_Astrophysics",
+      "ts": "2026-04-07T23:35:28.222189"
+    },
+    "4c2fd75b": {
+      "name": "ArXiv_Thermodynamics",
+      "ts": "2026-04-07T23:35:30.363488"
+    },
+    "580cf18b": {
+      "name": "ArXiv_Math_Analysis",
+      "ts": "2026-04-07T23:35:32.478276"
+    },
+    "8bfa6362": {
+      "name": "ArXiv_Math_NumberTheory",
+      "ts": "2026-04-07T23:35:34.603244"
+    },
+    "c8c6b122": {
+      "name": "ArXiv_Math_Probability",
+      "ts": "2026-04-07T23:35:36.753086"
+    },
+    "4f494833": {
+      "name": "ArXiv_DiffGeometry",
+      "ts": "2026-04-07T23:35:38.877768"
+    },
+    "fb4fb65b": {
+      "name": "ArXiv_Topology",
+      "ts": "2026-04-07T23:35:40.999591"
+    },
+    "0780361b": {
+      "name": "ArXiv_Algebra",
+      "ts": "2026-04-07T23:35:43.229075"
+    },
+    "88f7a08b": {
+      "name": "ArXiv_MathPhysics",
+      "ts": "2026-04-07T23:35:45.344505"
+    },
+    "9a89b51b": {
+      "name": "ArXiv_GameTheory",
+      "ts": "2026-04-07T23:36:19.505154"
+    },
+    "575c4ccd": {
+      "name": "ArXiv_ChaosTheory",
+      "ts": "2026-04-07T23:36:21.633487"
+    },
+    "ced0be23": {
+      "name": "ArXiv_CategoryTheory",
+      "ts": "2026-04-07T23:36:23.756456"
+    },
+    "c7accae6": {
+      "name": "ArXiv_Trigonometry",
+      "ts": "2026-04-07T23:36:25.886348"
+    },
+    "ea74b6f3": {
+      "name": "PubMed_Consciousness",
+      "ts": "2026-04-07T23:36:28.117366"
+    },
+    "75e47b34": {
+      "name": "ArXiv_CogSci",
+      "ts": "2026-04-07T23:36:30.256329"
+    },
+    "0119085d": {
+      "name": "ArXiv_Social_Psychology",
+      "ts": "2026-04-07T23:36:32.384489"
+    },
+    "303c54d4": {
+      "name": "ArXiv_Leadership",
+      "ts": "2026-04-07T23:36:34.507640"
+    },
+    "8e3b2a94": {
+      "name": "ArXiv_Grief",
+      "ts": "2026-04-07T23:36:36.630939"
+    },
+    "38a4aed5": {
+      "name": "ArXiv_Body_Language",
+      "ts": "2026-04-07T23:36:38.769078"
+    },
+    "80a8a5dd": {
+      "name": "ArXiv_Deescalation",
+      "ts": "2026-04-07T23:36:40.902707"
+    },
+    "548f5891": {
+      "name": "Plato_Republic",
+      "ts": "2026-04-07T23:36:56.544885"
+    },
+    "56a77319": {
+      "name": "Aristotle_Ethics",
+      "ts": "2026-04-07T23:37:02.532846"
+    },
+    "488e7005": {
+      "name": "Nietzsche_Zarathustra",
+      "ts": "2026-04-07T23:37:07.545865"
+    },
+    "0d1ff751": {
+      "name": "Descartes_Meditations",
+      "ts": "2026-04-07T23:37:12.900135"
+    },
+    "5c7f5063": {
+      "name": "Kant_Critique",
+      "ts": "2026-04-07T23:37:19.541819"
+    },
+    "9fab7f07": {
+      "name": "Plato_Dialogues",
+      "ts": "2026-04-07T23:37:24.526908"
+    },
+    "2b9a69a5": {
+      "name": "Marcus_Aurelius_Meditations",
+      "ts": "2026-04-07T23:37:29.691701"
+    },
+    "f5357161": {
+      "name": "Seneca_Letters",
+      "ts": "2026-04-07T23:37:39.348607"
+    },
+    "e839dc31": {
+      "name": "Epictetus_Discourses",
+      "ts": "2026-04-07T23:37:45.083970"
+    },
+    "77fd30a6": {
+      "name": "Locke_Human_Understanding",
+      "ts": "2026-04-07T23:37:51.591246"
+    },
+    "f24fcdce": {
+      "name": "Hume_Enquiry",
+      "ts": "2026-04-07T23:37:59.510904"
+    },
+    "bc43a1e3": {
+      "name": "ArXiv_Philosophy_Mind",
+      "ts": "2026-04-07T23:38:01.642984"
+    },
+    "30ee574b": {
+      "name": "Rumi_Masnavi",
+      "ts": "2026-04-07T23:38:07.624963"
+    },
+    "70951fd9": {
+      "name": "Whitman_Leaves_of_Grass",
+      "ts": "2026-04-07T23:38:13.858003"
+    },
+    "5194aae9": {
+      "name": "Dickinson_Poems",
+      "ts": "2026-04-07T23:38:26.856426"
+    },
+    "529e6c00": {
+      "name": "Shakespeare_Sonnets",
+      "ts": "2026-04-07T23:38:39.774900"
+    },
+    "a7072f31": {
+      "name": "Gibran_Prophet",
+      "ts": "2026-04-07T23:38:48.393447"
+    },
+    "8b0012a2": {
+      "name": "Eliot_Wasteland",
+      "ts": "2026-04-07T23:39:26.428176"
+    },
+    "943f93fd": {
+      "name": "Frost_Poems",
+      "ts": "2026-04-07T23:39:31.731439"
+    },
+    "a5f0ddcf": {
+      "name": "Maya_Angelou_Style",
+      "ts": "2026-04-07T23:39:33.866650"
+    },
+    "5395e619": {
+      "name": "Sylvia_Plath_Analysis",
+      "ts": "2026-04-07T23:39:35.978449"
+    },
+    "0178ed1c": {
+      "name": "Shakespeare_Hamlet",
+      "ts": "2026-04-07T23:39:44.251884"
+    },
+    "267bdb98": {
+      "name": "Blake_Songs",
+      "ts": "2026-04-07T23:40:32.313404"
+    },
+    "9e27fef9": {
+      "name": "Keats_Poems",
+      "ts": "2026-04-07T23:40:40.696880"
+    },
+    "4cde6edd": {
+      "name": "Bhagavad_Gita",
+      "ts": "2026-04-07T23:40:48.012703"
+    },
+    "99a2f1ea": {
+      "name": "Dhammapada_Buddhism",
+      "ts": "2026-04-07T23:40:54.364812"
+    },
     "732e9890": {
       "name": "Tao_Te_Ching",
-      "ts": "2026-04-07T21:45:23.061735"
+      "ts": "2026-04-07T23:41:00.923286"
     },
-    "0281fdff": {
-      "name": "ArXiv_Physics_Survey",
-      "ts": "2026-04-07T21:45:33.155913"
+    "2c8b633d": {
+      "name": "Upanishads",
+      "ts": "2026-04-07T23:41:10.074020"
     },
-    "312d4402": {
-      "name": "ArXiv_QM_Survey",
-      "ts": "2026-04-07T21:45:35.264198"
+    "51332f5a": {
+      "name": "Book_of_Job",
+      "ts": "2026-04-07T23:41:16.131853"
     },
-    "1887b8bb": {
+    "8b73598a": {
+      "name": "ArXiv_Mindfulness",
+      "ts": "2026-04-07T23:41:18.292475"
+    },
+    "65f2d6f8": {
+      "name": "ArXiv_Transcendental",
+      "ts": "2026-04-07T23:41:20.441827"
+    },
+    "d15cb40f": {
+      "name": "ArXiv_Lucid_Dreams",
+      "ts": "2026-04-07T23:41:22.587003"
+    },
+    "62b84ed4": {
       "name": "ArXiv_Cryptanalysis",
-      "ts": "2026-04-07T21:45:37.363972"
+      "ts": "2026-04-07T23:41:24.747845"
     },
     "9f2a1a18": {
       "name": "Peirce_Logic",
-      "ts": "2026-04-07T21:45:41.826553"
+      "ts": "2026-04-07T23:41:30.496298"
+    },
+    "5b9837b6": {
+      "name": "ArXiv_Game_Theory_Logic",
+      "ts": "2026-04-07T23:41:32.632275"
+    },
+    "e2ac0d16": {
+      "name": "ArXiv_Cipher_Breaking",
+      "ts": "2026-04-07T23:41:34.771000"
+    },
+    "b30797ca": {
+      "name": "ArXiv_Deductive_Reasoning",
+      "ts": "2026-04-07T23:41:36.899074"
+    },
+    "9e11251e": {
+      "name": "Lewis_Carroll_Logic",
+      "ts": "2026-04-07T23:41:44.101833"
     },
     "91cc6333": {
       "name": "US_Army_Survival_Manual",
-      "ts": "2026-04-07T21:45:53.842021"
+      "ts": "2026-04-07T23:42:01.271876"
     },
     "196dd343": {
       "name": "FEMA_Prepare",
-      "ts": "2026-04-07T21:45:55.979650"
+      "ts": "2026-04-07T23:42:03.424875"
+    },
+    "502c4ac9": {
+      "name": "ArXiv_Emergency_Medicine",
+      "ts": "2026-04-07T23:42:05.598475"
+    },
+    "2488b96d": {
+      "name": "ArXiv_Navigation",
+      "ts": "2026-04-07T23:42:07.731943"
+    },
+    "af4fb128": {
+      "name": "Scouting_Handbook",
+      "ts": "2026-04-07T23:42:14.130643"
+    },
+    "c86caab1": {
+      "name": "ArXiv_AI_ML",
+      "ts": "2026-04-07T23:42:16.253766"
+    },
+    "8f8b35bf": {
+      "name": "ArXiv_LLM",
+      "ts": "2026-04-07T23:42:18.394483"
+    },
+    "f5e67e73": {
+      "name": "ArXiv_QuantumTech",
+      "ts": "2026-04-07T23:42:20.521590"
+    },
+    "8b337ef1": {
+      "name": "ArXiv_Robotics",
+      "ts": "2026-04-07T23:42:22.666775"
+    },
+    "c7d49994": {
+      "name": "ArXiv_HCI",
+      "ts": "2026-04-07T23:42:24.792026"
+    },
+    "bb7c7252": {
+      "name": "ArXiv_Cybersecurity_AI",
+      "ts": "2026-04-07T23:42:26.928867"
     },
     "41c50b9d": {
       "name": "Python_Docs_Tutorial",
-      "ts": "2026-04-07T22:01:19.111437"
+      "ts": "2026-04-07T23:42:29.154893"
     },
     "35dc75cb": {
       "name": "Bash_Guide",
-      "ts": "2026-04-07T22:01:22.617902"
+      "ts": "2026-04-07T23:42:32.037722"
     },
     "2b495121": {
       "name": "Linux_Command_Line",
-      "ts": "2026-04-07T22:01:25.038632"
+      "ts": "2026-04-07T23:42:34.372850"
     },
     "a0f3dee9": {
       "name": "JavaScript_MDN",
-      "ts": "2026-04-07T22:01:27.217001"
+      "ts": "2026-04-07T23:42:36.543345"
     },
-    "a8d9d735": {
+    "80b31f6e": {
       "name": "ArXiv_ProgrammingLanguages",
-      "ts": "2026-04-07T22:01:29.697366"
+      "ts": "2026-04-07T23:42:38.655731"
     },
-    "c2916053": {
+    "bc26165e": {
       "name": "ArXiv_SoftwareEngineering",
-      "ts": "2026-04-07T22:01:32.040866"
+      "ts": "2026-04-07T23:42:40.955157"
+    },
+    "a096ba20": {
+      "name": "ArXiv_MachineLearning_Code",
+      "ts": "2026-04-07T23:42:43.267848"
+    },
+    "26fbd33a": {
+      "name": "ArXiv_AppDevelopment",
+      "ts": "2026-04-07T23:42:45.413748"
+    },
+    "b9c26961": {
+      "name": "ArXiv_MATLAB_Signal",
+      "ts": "2026-04-07T23:42:47.555853"
     },
     "3c459abe": {
       "name": "US_Constitution",
-      "ts": "2026-04-07T22:01:40.431036"
+      "ts": "2026-04-07T23:42:53.520362"
     },
     "2d5e25c7": {
       "name": "Declaration_Independence",
-      "ts": "2026-04-07T22:01:46.953507"
+      "ts": "2026-04-07T23:43:04.587687"
     },
     "dca4013a": {
       "name": "Herodotus_Histories",
-      "ts": "2026-04-07T22:01:55.272560"
+      "ts": "2026-04-07T23:43:14.466397"
     },
     "2a398bae": {
       "name": "Greek_Mythology_Bulfinch",
-      "ts": "2026-04-07T22:02:00.124981"
+      "ts": "2026-04-07T23:43:21.352873"
     },
-    "42b3a038": {
+    "339ae0fd": {
       "name": "ArXiv_DigitalHistory",
-      "ts": "2026-04-07T22:02:02.656047"
+      "ts": "2026-04-07T23:43:23.517784"
     },
-    "622b0441": {
+    "719437d0": {
+      "name": "Sun_Tzu_Art_of_War",
+      "ts": "2026-04-07T23:43:29.812506"
+    },
+    "ffb44493": {
+      "name": "Machiavelli_Prince",
+      "ts": "2026-04-07T23:43:36.898630"
+    },
+    "5bf1f4c3": {
+      "name": "Caesar_Gallic_Wars",
+      "ts": "2026-04-07T23:43:44.271079"
+    },
+    "9bea02b9": {
+      "name": "ArXiv_Military_History",
+      "ts": "2026-04-07T23:43:46.369937"
+    },
+    "57d7ff4c": {
+      "name": "ArXiv_Mythology",
+      "ts": "2026-04-07T23:43:48.499698"
+    },
+    "c5abc2ea": {
+      "name": "ArXiv_Unsolved_History",
+      "ts": "2026-04-07T23:43:50.622535"
+    },
+    "03764192": {
       "name": "Zeno_Paradoxes_Analysis",
-      "ts": "2026-04-07T22:02:05.012805"
+      "ts": "2026-04-07T23:43:52.763410"
     },
-    "2004a50d": {
+    "6e4b691b": {
       "name": "ArXiv_Paradoxes_Logic",
-      "ts": "2026-04-07T22:02:07.675094"
+      "ts": "2026-04-07T23:43:54.913428"
     },
-    "891abfce": {
+    "88d7681e": {
       "name": "Fermi_Paradox",
-      "ts": "2026-04-07T22:02:10.131410"
+      "ts": "2026-04-07T23:43:57.033662"
     },
-    "e31c6db2": {
+    "94ae65db": {
       "name": "ArXiv_QuantumComputing",
-      "ts": "2026-04-07T22:02:12.700867"
+      "ts": "2026-04-07T23:43:59.152977"
     },
-    "98f3c3d3": {
+    "494cb222": {
       "name": "ArXiv_QuantumCrypto",
-      "ts": "2026-04-07T22:02:15.146491"
+      "ts": "2026-04-07T23:44:01.294014"
     },
-    "c19dd2e7": {
+    "506c6f40": {
       "name": "ArXiv_QuantumNetworks",
-      "ts": "2026-04-07T22:02:17.606200"
+      "ts": "2026-04-07T23:44:03.436326"
     },
-    "dbbbc5f1": {
+    "db94c118": {
       "name": "ArXiv_PostQuantumCrypto",
-      "ts": "2026-04-07T22:02:20.168619"
+      "ts": "2026-04-07T23:44:05.593403"
     },
-    "ea554200": {
+    "dbc36599": {
       "name": "ArXiv_Bitcoin",
-      "ts": "2026-04-07T22:09:47.794340"
+      "ts": "2026-04-07T23:44:07.726473"
     },
-    "bdcbcd70": {
+    "fb91d168": {
       "name": "ArXiv_Investment",
-      "ts": "2026-04-07T22:09:50.526269"
+      "ts": "2026-04-07T23:44:09.860407"
     },
-    "8e98456f": {
+    "8b04b3e5": {
       "name": "ArXiv_FinancialMath",
-      "ts": "2026-04-07T22:09:52.881504"
+      "ts": "2026-04-07T23:44:12.001132"
     },
-    "6b74171d": {
+    "9dbf252b": {
       "name": "ArXiv_SecurityCerts",
-      "ts": "2026-04-07T22:09:55.235414"
+      "ts": "2026-04-07T23:44:14.136234"
     },
-    "3ad42ffc": {
+    "69361da9": {
       "name": "ArXiv_NetworkFundamentals",
-      "ts": "2026-04-07T22:09:57.695597"
+      "ts": "2026-04-07T23:44:16.263728"
     },
-    "10a00d76": {
+    "a497618a": {
       "name": "ArXiv_CloudSecurity",
-      "ts": "2026-04-07T22:10:00.152517"
+      "ts": "2026-04-07T23:44:18.401273"
     },
-    "ea8fd7f9": {
+    "4135c90a": {
       "name": "ArXiv_PenTesting",
-      "ts": "2026-04-07T22:10:03.122031"
+      "ts": "2026-04-07T23:44:20.527395"
     },
-    "07499c9d": {
+    "912fe333": {
       "name": "ArXiv_Meditation_Neuroscience",
-      "ts": "2026-04-07T22:10:05.476717"
+      "ts": "2026-04-07T23:44:22.665006"
     },
-    "82a26c9c": {
+    "d5990df1": {
       "name": "ArXiv_OBE_Research",
-      "ts": "2026-04-07T22:10:07.935974"
+      "ts": "2026-04-07T23:44:24.813987"
     },
-    "65eab567": {
+    "f57b32d0": {
       "name": "ArXiv_Altered_States",
-      "ts": "2026-04-07T22:10:10.392287"
+      "ts": "2026-04-07T23:44:26.956348"
     }
   }
 }
