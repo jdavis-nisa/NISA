@@ -287,6 +287,45 @@ class SaveCodeRequest(BaseModel):
     domain_path: str
     language: str = "text"
 
+@app.get("/history")
+async def get_history(limit: int = 100):
+    """Return conversation history grouped by session"""
+    try:
+        import chromadb
+        from collections import defaultdict
+        
+        client = chromadb.HttpClient(host="localhost", port=8000)
+        col = client.get_collection("nisa_memory")
+        results = col.get(limit=limit, include=["documents", "metadatas"])
+        
+        sessions = defaultdict(list)
+        for doc, meta in zip(results["documents"], results["metadatas"]):
+            sid = meta.get("session_id", "default")
+            sessions[sid].append({
+                "timestamp": meta.get("timestamp", ""),
+                "user_message": meta.get("user_message", ""),
+                "nisaba_response": meta.get("nisaba_response", "")[:200],
+                "model_used": meta.get("model_used", ""),
+                "routing_reason": meta.get("routing_reason", ""),
+            })
+        
+        # Sort each session by timestamp
+        session_list = []
+        for sid, messages in sessions.items():
+            messages.sort(key=lambda x: x["timestamp"])
+            session_list.append({
+                "session_id": sid,
+                "message_count": len(messages),
+                "first_message": messages[0]["user_message"][:60] if messages else "",
+                "last_timestamp": messages[-1]["timestamp"] if messages else "",
+                "messages": messages
+            })
+        
+        session_list.sort(key=lambda x: x["last_timestamp"], reverse=True)
+        return {"sessions": session_list, "total": len(session_list)}
+    except Exception as e:
+        return {"sessions": [], "total": 0, "error": str(e)}
+
 @app.post("/save_code")
 async def save_code(req: SaveCodeRequest):
     """Save a code block to the SSD knowledge library"""

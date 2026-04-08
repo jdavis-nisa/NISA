@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff, Save } from "lucide-react"
+import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff, Save, Clock } from "lucide-react"
 import axios from "axios"
 import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -20,6 +20,31 @@ export default function Chat() {
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      const res = await axios.get(`${NLU_API}/history?limit=200`)
+      setHistory(res.data.sessions || [])
+    } catch (e) {}
+    setHistoryLoading(false)
+  }
+
+  const loadSession = (session) => {
+    const restored = session.messages.map(m => ([
+      { role: "user", content: m.user_message },
+      { role: "assistant", content: m.nisaba_response }
+    ])).flat().filter(m => m.content)
+    setMessages([
+      { role: "assistant", content: "Nisaba online. I am NISA — your Network Intelligence Security Assistant. How can I help you today?" },
+      ...restored
+    ])
+    setShowHistory(false)
+  }
+
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -110,6 +135,70 @@ export default function Chat() {
       margin: "0 auto",
       width: "100%",
     }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", paddingBottom: "8px" }}>
+        <button onClick={() => { setShowHistory(true); loadHistory() }} style={{
+          display: "flex", alignItems: "center", gap: "6px",
+          padding: "6px 12px",
+          background: "transparent",
+          border: "1px solid var(--border)",
+          borderRadius: "2px",
+          color: "var(--text-dim)",
+          fontFamily: "Rajdhani, sans-serif",
+          fontWeight: 600, fontSize: "10px",
+          letterSpacing: "0.1em",
+          cursor: "pointer",
+        }}>
+          <Clock size={10} /> HISTORY
+        </button>
+      </div>
+
+      {showHistory && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.7)", zIndex: 1000,
+          display: "flex", justifyContent: "center", alignItems: "flex-start",
+          paddingTop: "60px"
+        }} onClick={() => setShowHistory(false)}>
+          <div style={{
+            background: "var(--bg-secondary)", border: "1px solid var(--border)",
+            borderRadius: "4px", width: "600px", maxHeight: "70vh",
+            overflow: "hidden", display: "flex", flexDirection: "column"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: "16px", borderBottom: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center"
+            }}>
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.15em", color: "var(--accent-gold)" }}>
+                CONVERSATION HISTORY
+              </span>
+              <button onClick={() => setShowHistory(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "18px" }}>×</button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {historyLoading ? (
+                <div style={{ padding: "20px", textAlign: "center", fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--text-dim)" }}>Loading...</div>
+              ) : history.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--text-dim)" }}>No history found</div>
+              ) : history.map((session, i) => (
+                <div key={i} onClick={() => loadSession(session)} style={{
+                  padding: "12px 16px", borderBottom: "1px solid var(--border)",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--bg-primary)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-primary)", marginBottom: "4px" }}>
+                    {session.first_message || "Untitled conversation"}
+                  </div>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)" }}>{session.message_count} messages</span>
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)" }}>{session.last_timestamp?.slice(0, 10)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{
         flex: 1,
         overflowY: "auto",
