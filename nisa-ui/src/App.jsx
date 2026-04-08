@@ -10,6 +10,7 @@ import Forensics from "./components/Forensics"
 import Memory from "./components/Memory"
 import RedTeam from "./components/RedTeam"
 import Signal from "./components/Signal"
+import Metasploit from "./components/Metasploit"
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
               <Route path="/charts" element={<Charts />} />
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/signal" element={<Signal />} />
+              <Route path="/metasploit" element={<Metasploit />} />
             </Routes>
           </main>
         </div>
@@ -88,6 +90,7 @@ function Header() {
         <StatusDot label="FORENSICS API" port={8083} />
         <StatusDot label="RED TEAM API" port={8084} />
         <StatusDot label="SURICATA IDS" port={8085} />
+        <StatusDot label="METASPLOIT" port={8089} />
         <StatusDot label="SIGNAL API" port={8088} />
         <StatusDot label="PHOENIX" port={6006} />
         <div style={{
@@ -136,6 +139,7 @@ function Sidebar() {
     { to: "/charts", icon: BarChart2, label: "VISUALIZE", sublabel: "Charts & Analytics" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
     { to: "/signal", icon: Activity, label: "SIGNAL", sublabel: "Waveform & Radar" },
+    { to: "/metasploit", icon: Shield, label: "METASPLOIT", sublabel: "Exploit Framework" },
   ]
   return (
     <nav style={{

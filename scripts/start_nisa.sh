@@ -115,8 +115,32 @@ else
     echo "       Visualization API failed to start - check logs/viz_api.log"
 fi
 
-# ── Step 10: Signal Processing API ──────────────────────────────
-echo "[ 10/11 ] Starting Signal Processing API (port 8088)..."
+# ── Step 10: Metasploit API ───────────────────────────────────
+echo "[ 10/12 ] Starting Metasploit API (port 8089)..."
+lsof -ti:8089 | xargs kill -9 2>/dev/null || true
+python3.11 "$NISA_DIR/src/security/metasploit_api.py" > "$NISA_DIR/logs/metasploit_api.log" 2>&1 &
+MSF_PID=$!
+sleep 2
+if curl -s http://localhost:8089/health > /dev/null 2>&1; then
+    echo "       Metasploit API online - PID $MSF_PID"
+else
+    echo "       Metasploit API failed to start - check logs/metasploit_api.log"
+fi
+
+# ── Step 11: Terminal Server ───────────────────────────────────
+echo "[ 11/13 ] Starting Terminal Server (port 8091)..."
+lsof -ti:8091 | xargs kill -9 2>/dev/null || true
+python3.11 "$NISA_DIR/src/core/terminal_server.py" > "$NISA_DIR/logs/terminal_server.log" 2>&1 &
+TERM_PID=$!
+sleep 2
+if lsof -i:8091 > /dev/null 2>&1; then
+    echo "       Terminal Server online - PID $TERM_PID"
+else
+    echo "       Terminal Server failed to start - check logs/terminal_server.log"
+fi
+
+# ── Step 12: Signal Processing API ──────────────────────────────
+echo "[ 12/13 ] Starting Signal Processing API (port 8088)..."
 lsof -ti:8088 | xargs kill -9 2>/dev/null || true
 python3.11 "$NISA_DIR/src/core/signal_api.py" > "$NISA_DIR/logs/signal_api.log" 2>&1 &
 SIG_PID=70647
@@ -128,7 +152,7 @@ else
 fi
 
 # ── Step 11: Phoenix ──────────────────────────────────────────────
-echo "[ 11/11 ] Starting Arize Phoenix (port 6006)..."
+echo "[ 13/13 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5
@@ -150,6 +174,8 @@ echo "║  Red Team     http://localhost:8084      ║"
 echo "║  Suricata IDS http://localhost:8085      ║"
 echo "║  Remediation  http://localhost:8086      ║"
 echo "║  Visualize    http://localhost:8087      ║"
+echo "║  Metasploit   http://localhost:8089      ║"
+echo "║  Terminal     ws://localhost:8091       ║"
 echo "║  Signal Proc  http://localhost:8088      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"

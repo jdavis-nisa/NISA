@@ -27,6 +27,7 @@ export default function Security() {
           { id: "nmap", label: "NMAP SCAN", icon: Radar },
           { id: "zap", label: "ZAP SCAN", icon: Globe },
           { id: "ids", label: "SURICATA IDS", icon: Activity },
+          { id: "burp", label: "BURP SUITE", icon: Shield },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             display: "flex",
@@ -54,6 +55,7 @@ export default function Security() {
       {activeTab === "nmap" && <NmapPanel />}
       {activeTab === "zap" && <ZapPanel />}
       {activeTab === "ids" && <SuricataPanel />}
+      {activeTab === "burp" && <BurpPanel />}
     </div>
   )
 }
@@ -584,6 +586,112 @@ function SuricataPanel() {
           <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", lineHeight: "1.7", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>{analysis}</div>
         </Panel>
       )}
+    </div>
+  )
+}
+
+// ── Burp Suite Panel ─────────────────────────────────────────────
+function BurpPanel() {
+  const [notes, setNotes] = useState("")
+  const [saved, setSaved] = useState(false)
+
+  const launchBurp = () => {
+    api.post("http://localhost:8082/burp/launch").catch(() => {})
+    window.open("x-burp://", "_blank")
+    setTimeout(() => {
+      const cmd = "open -a /Applications/Burp\ Suite\ Community\ Edition.app"
+      api.post("http://localhost:8082/burp/launch", { cmd }).catch(() => {})
+    }, 500)
+  }
+
+  const saveNotes = () => {
+    localStorage.setItem("burp_notes", notes)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  useState(() => {
+    const saved = localStorage.getItem("burp_notes")
+    if (saved) setNotes(saved)
+  }, [])
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "4px", padding: "20px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+            marginBottom: "8px" }}>BURP SUITE COMMUNITY</div>
+          <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "12px",
+            color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "16px" }}>
+            Web application security testing proxy. Intercept, modify, and replay HTTP/S traffic.
+            Manual testing, spider crawling, and vulnerability discovery.
+          </div>
+          <button onClick={launchBurp} style={{
+            padding: "10px 20px", background: "var(--accent-gold-glow)",
+            border: "1px solid var(--accent-gold)", borderRadius: "4px",
+            cursor: "pointer", fontFamily: "Rajdhani, sans-serif",
+            fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em",
+            color: "var(--accent-gold)", width: "100%"
+          }}>LAUNCH BURP SUITE</button>
+        </div>
+
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "4px", padding: "20px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+            marginBottom: "8px" }}>PROXY SETUP</div>
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px",
+            color: "var(--text-secondary)", lineHeight: 2 }}>
+            <div>Proxy listener: <span style={{ color: "var(--accent-gold)" }}>127.0.0.1:8080</span></div>
+            <div>Browser proxy: <span style={{ color: "var(--accent-gold)" }}>localhost:8080</span></div>
+            <div>Intercept: <span style={{ color: "var(--accent-gold)" }}>Proxy → Intercept ON</span></div>
+            <div>CA cert: <span style={{ color: "var(--accent-gold)" }}>http://burp/cert</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+        borderRadius: "4px", padding: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+          marginBottom: "12px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)" }}>
+            FINDINGS NOTES
+          </div>
+          <button onClick={saveNotes} style={{
+            padding: "6px 14px", background: saved ? "var(--success)" : "transparent",
+            border: "1px solid " + (saved ? "var(--success)" : "var(--border)"),
+            borderRadius: "4px", cursor: "pointer",
+            fontFamily: "Rajdhani, sans-serif", fontWeight: 600,
+            fontSize: "11px", letterSpacing: "0.1em",
+            color: saved ? "#000" : "var(--text-dim)"
+          }}>{saved ? "SAVED" : "SAVE NOTES"}</button>
+        </div>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Document Burp Suite findings here...&#10;&#10;Target: &#10;Vulnerabilities found: &#10;Endpoints tested: &#10;Notes: "
+          rows={12} style={{
+            width: "100%", background: "var(--bg-tertiary)",
+            border: "1px solid var(--border)", borderRadius: "4px",
+            padding: "12px", color: "var(--text-primary)",
+            fontFamily: "JetBrains Mono, monospace", fontSize: "12px",
+            outline: "none", resize: "vertical", lineHeight: 1.6
+          }} />
+      </div>
+
+      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+        borderRadius: "4px", padding: "16px" }}>
+        <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+          fontSize: "12px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+          marginBottom: "8px" }}>UPGRADE NOTE</div>
+        <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "12px",
+          color: "var(--text-dim)", lineHeight: 1.6 }}>
+          Burp Suite Professional ($449/yr) adds REST API for full NISA integration —
+          automated scanning, finding export, and programmatic control.
+          Community Edition requires manual operation via the GUI.
+        </div>
+      </div>
     </div>
   )
 }
