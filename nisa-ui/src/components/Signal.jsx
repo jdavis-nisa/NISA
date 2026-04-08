@@ -362,6 +362,7 @@ function AmbiguityTab() {
 
 function OctaveTab() {
   const [code, setCode] = useState(`% GNU Octave Signal Processing Example
+pkg load signal;
 % LFM Waveform Generation and Analysis
 fs = 100000;          % Sample rate (Hz)
 T = 0.001;            % Duration (s)
@@ -378,10 +379,10 @@ S = abs(fft(s));
 f = (0:N-1) * fs / N;
 
 % Display results
-printf("Samples: %d\n", N);
-printf("Freq range: %.0f - %.0f Hz\n", f0, f1);
-printf("Peak magnitude: %.4f\n", max(S));
-printf("Time-bandwidth product: %.2f\n", (f1-f0)*T);`)
+disp(["Samples: ", num2str(N)]);
+disp(["Freq range: ", num2str(f0), " - ", num2str(f1), " Hz"]);
+disp(["Peak magnitude: ", num2str(max(S))]);
+disp(["Time-bandwidth product: ", num2str((f1-f0)*T)]);`)
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
