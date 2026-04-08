@@ -9,6 +9,7 @@ import Charts from "./components/Charts"
 import Forensics from "./components/Forensics"
 import Memory from "./components/Memory"
 import RedTeam from "./components/RedTeam"
+import Signal from "./components/Signal"
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
               <Route path="/remediation" element={<Remediation />} />
               <Route path="/charts" element={<Charts />} />
               <Route path="/compliance" element={<Compliance />} />
+              <Route path="/signal" element={<Signal />} />
             </Routes>
           </main>
         </div>
@@ -86,13 +88,14 @@ function Header() {
         <StatusDot label="FORENSICS API" port={8083} />
         <StatusDot label="RED TEAM API" port={8084} />
         <StatusDot label="SURICATA IDS" port={8085} />
+        <StatusDot label="SIGNAL API" port={8088} />
         <StatusDot label="PHOENIX" port={6006} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
           color: "var(--text-dim)",
           letterSpacing: "0.1em",
-        }}>v0.2.0</div>
+        }}>v0.3.0</div>
       </div>
     </header>
   )
@@ -132,6 +135,7 @@ function Sidebar() {
     { to: "/remediation", icon: Shield, label: "REMEDIATION", sublabel: "Patch & Verify" },
     { to: "/charts", icon: BarChart2, label: "VISUALIZE", sublabel: "Charts & Analytics" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
+    { to: "/signal", icon: Activity, label: "SIGNAL", sublabel: "Waveform & Radar" },
   ]
   return (
     <nav style={{
