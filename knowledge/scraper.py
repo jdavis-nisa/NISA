@@ -21,7 +21,7 @@ SOURCES = {
         {"name": "NIST_NVD_CVE", "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=20&cvssV3Severity=CRITICAL", "type": "nvd"},
         {"name": "OWASP_Top10", "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/A00_2021_Introduction.md", "type": "text"},
         {"name": "MITRE_ATTACK", "url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json", "type": "mitre"},
-        {"name": "NIST_CSF", "url": "https://raw.githubusercontent.com/usnistgov/NIST-Cybersecurity-Framework/main/README.md", "type": "text"},,
+        {"name": "NIST_CSF", "url": "https://raw.githubusercontent.com/usnistgov/NIST-Cybersecurity-Framework/main/README.md", "type": "text"},
 
         {"name": "OWASP_Testing_Guide", "url": "https://raw.githubusercontent.com/OWASP/wstg/master/document/4-Web_Application_Security_Testing/README.md", "type": "text"},
         {"name": "ArXiv_Malware", "url": "https://export.arxiv.org/api/query?search_query=malware+detection+machine+learning&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -32,7 +32,7 @@ SOURCES = {
     ],
     "radar_ew": [
         {"name": "DTIC_Radar", "url": "https://apps.dtic.mil/sti/api/search?q=radar+signal+processing&fields=title,abstract&rows=20", "type": "dtic"},
-        {"name": "NASA_Radar", "url": "https://ntrs.nasa.gov/api/citations/search?q=radar&rows=10", "type": "nasa"},,
+        {"name": "NASA_Radar", "url": "https://ntrs.nasa.gov/api/citations/search?q=radar&rows=10", "type": "nasa"},
 
         {"name": "ArXiv_Radar_ML", "url": "https://export.arxiv.org/api/query?search_query=radar+machine+learning+detection&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Signal_Processing", "url": "https://export.arxiv.org/api/query?search_query=cat:eess.SP&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -42,7 +42,7 @@ SOURCES = {
     "physics": [
         {"name": "Feynman_Lectures_Vol1", "url": "https://archive.org/stream/feynmanlectures01feyn/feynmanlectures01feyn_djvu.txt", "type": "text"},
         {"name": "ArXiv_Physics_Survey", "url": "https://export.arxiv.org/api/query?search_query=cat:physics.class-ph&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_QM_Survey", "url": "https://export.arxiv.org/api/query?search_query=cat:quant-ph&max_results=50&sortBy=submittedDate", "type": "arxiv"},,
+        {"name": "ArXiv_QM_Survey", "url": "https://export.arxiv.org/api/query?search_query=cat:quant-ph&max_results=50&sortBy=submittedDate", "type": "arxiv"},
 
         {"name": "ArXiv_Electromagnetism", "url": "https://export.arxiv.org/api/query?search_query=electromagnetism+Maxwell+equations&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Relativity", "url": "https://export.arxiv.org/api/query?search_query=general+relativity+spacetime+Einstein&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -58,7 +58,7 @@ SOURCES = {
         {"name": "ArXiv_Topology", "url": "https://export.arxiv.org/api/query?search_query=cat:math.AT&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Algebra", "url": "https://export.arxiv.org/api/query?search_query=cat:math.AG&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_MathPhysics", "url": "https://export.arxiv.org/api/query?search_query=cat:math-ph&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "Euclid_Elements", "url": "https://www.gutenberg.org/cache/epub/21076/pg21076.txt", "type": "text"},,
+        {"name": "Euclid_Elements", "url": "https://www.gutenberg.org/cache/epub/21076/pg21076.txt", "type": "text"},
 
         {"name": "ArXiv_GameTheory", "url": "https://export.arxiv.org/api/query?search_query=cat:math.OC&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_ChaosTheory", "url": "https://export.arxiv.org/api/query?search_query=chaos+theory+dynamical+systems&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -67,7 +67,7 @@ SOURCES = {
     ],
     "psychology": [
         {"name": "PubMed_Consciousness", "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=consciousness+psychology&retmax=10&retmode=json", "type": "pubmed_search"},
-        {"name": "ArXiv_CogSci", "url": "https://export.arxiv.org/api/query?search_query=cat:q-bio.NC&max_results=50&sortBy=submittedDate", "type": "arxiv"},,
+        {"name": "ArXiv_CogSci", "url": "https://export.arxiv.org/api/query?search_query=cat:q-bio.NC&max_results=50&sortBy=submittedDate", "type": "arxiv"},
 
         {"name": "ArXiv_Social_Psychology", "url": "https://export.arxiv.org/api/query?search_query=social+psychology+behavior+influence&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Leadership", "url": "https://export.arxiv.org/api/query?search_query=leadership+psychology+organizational&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -80,7 +80,7 @@ SOURCES = {
         {"name": "Plato_Republic", "url": "https://www.gutenberg.org/files/1497/1497-0.txt", "type": "text"},
         {"name": "Aristotle_Ethics", "url": "https://www.gutenberg.org/files/8438/8438-0.txt", "type": "text"},
         {"name": "Nietzsche_Zarathustra", "url": "https://www.gutenberg.org/files/1998/1998-0.txt", "type": "text"},
-        {"name": "Descartes_Meditations", "url": "https://www.gutenberg.org/files/59/59-0.txt", "type": "text"},,
+        {"name": "Descartes_Meditations", "url": "https://www.gutenberg.org/files/59/59-0.txt", "type": "text"},
 
         {"name": "Kant_Critique", "url": "https://www.gutenberg.org/cache/epub/4280/pg4280.txt", "type": "text"},
         {"name": "Plato_Dialogues", "url": "https://www.gutenberg.org/cache/epub/1656/pg1656.txt", "type": "text"},
@@ -97,7 +97,7 @@ SOURCES = {
         {"name": "Dickinson_Poems", "url": "https://www.gutenberg.org/files/12242/12242-0.txt", "type": "text"},
         {"name": "Shakespeare_Sonnets", "url": "https://www.gutenberg.org/files/1041/1041-0.txt", "type": "text"},
         {"name": "Gibran_Prophet", "url": "https://www.gutenberg.org/files/58585/58585-0.txt", "type": "text"},
-        {"name": "Dante_Divine_Comedy", "url": "https://www.gutenberg.org/files/8800/8800-0.txt", "type": "text"},,
+        {"name": "Dante_Divine_Comedy", "url": "https://www.gutenberg.org/files/8800/8800-0.txt", "type": "text"},
 
         {"name": "Eliot_Wasteland", "url": "https://www.gutenberg.org/cache/epub/1321/pg1321.txt", "type": "text"},
         {"name": "Frost_Poems", "url": "https://www.gutenberg.org/cache/epub/59824/pg59824.txt", "type": "text"},
@@ -112,7 +112,7 @@ SOURCES = {
         {"name": "Bhagavad_Gita", "url": "https://www.gutenberg.org/cache/epub/2388/pg2388.txt", "type": "text"},
         {"name": "Dhammapada_Buddhism", "url": "https://www.gutenberg.org/cache/epub/2017/pg2017.txt", "type": "text"},
         {"name": "Tao_Te_Ching", "url": "https://www.gutenberg.org/cache/epub/216/pg216.txt", "type": "text"},
-        {"name": "CIA_Gateway_Experience", "url": "https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5", "type": "text"},,
+        {"name": "CIA_Gateway_Experience", "url": "https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5", "type": "text"},
 
         {"name": "Upanishads", "url": "https://www.gutenberg.org/cache/epub/68171/pg68171.txt", "type": "text"},
         {"name": "Book_of_Job", "url": "https://www.gutenberg.org/cache/epub/83/pg83.txt", "type": "text"},
@@ -122,7 +122,7 @@ SOURCES = {
     ],
     "logic_puzzles": [
         {"name": "ArXiv_Cryptanalysis", "url": "https://export.arxiv.org/api/query?search_query=cryptanalysis+cipher&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "Peirce_Logic", "url": "https://www.gutenberg.org/cache/epub/69887/pg69887.txt", "type": "text"},,
+        {"name": "Peirce_Logic", "url": "https://www.gutenberg.org/cache/epub/69887/pg69887.txt", "type": "text"},
 
         {"name": "ArXiv_Game_Theory_Logic", "url": "https://export.arxiv.org/api/query?search_query=game+theory+logic+strategy+optimal&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Cipher_Breaking", "url": "https://export.arxiv.org/api/query?search_query=cipher+breaking+historical+cryptography&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -131,7 +131,7 @@ SOURCES = {
     ],
     "survival": [
         {"name": "US_Army_Survival_Manual", "url": "https://www.gutenberg.org/files/17007/17007-0.txt", "type": "text"},
-        {"name": "FEMA_Prepare", "url": "https://www.ready.gov/be-informed", "type": "text"},,
+        {"name": "FEMA_Prepare", "url": "https://www.ready.gov/be-informed", "type": "text"},
 
         {"name": "ArXiv_Emergency_Medicine", "url": "https://export.arxiv.org/api/query?search_query=emergency+medicine+trauma+field&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_Navigation", "url": "https://export.arxiv.org/api/query?search_query=navigation+orientation+wilderness+survival&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -140,7 +140,7 @@ SOURCES = {
     "technology": [
         {"name": "ArXiv_AI_ML", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.AI&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_LLM", "url": "https://export.arxiv.org/api/query?search_query=large+language+models&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_QuantumTech", "url": "https://export.arxiv.org/api/query?search_query=quantum+technology+applications&max_results=50&sortBy=submittedDate", "type": "arxiv"},,
+        {"name": "ArXiv_QuantumTech", "url": "https://export.arxiv.org/api/query?search_query=quantum+technology+applications&max_results=50&sortBy=submittedDate", "type": "arxiv"},
 
         {"name": "ArXiv_Robotics", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.RO&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_HCI", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.HC&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -153,7 +153,7 @@ SOURCES = {
         {"name": "Linux_Command_Line", "url": "https://www.gnu.org/software/bash/manual/bash.html", "type": "text"},
         {"name": "JavaScript_MDN", "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide", "type": "text"},
         {"name": "ArXiv_ProgrammingLanguages", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.PL&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SoftwareEngineering", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.SE&max_results=50&sortBy=submittedDate", "type": "arxiv"},,
+        {"name": "ArXiv_SoftwareEngineering", "url": "https://export.arxiv.org/api/query?search_query=cat:cs.SE&max_results=50&sortBy=submittedDate", "type": "arxiv"},
 
         {"name": "ArXiv_MachineLearning_Code", "url": "https://export.arxiv.org/api/query?search_query=machine+learning+implementation+tutorial&max_results=50&sortBy=submittedDate", "type": "arxiv"},
         {"name": "ArXiv_AppDevelopment", "url": "https://export.arxiv.org/api/query?search_query=mobile+app+development+architecture&max_results=50&sortBy=submittedDate", "type": "arxiv"},
@@ -164,7 +164,7 @@ SOURCES = {
         {"name": "Declaration_Independence", "url": "https://www.gutenberg.org/cache/epub/1/pg1.txt", "type": "text"},
         {"name": "Herodotus_Histories", "url": "https://www.gutenberg.org/cache/epub/2707/pg2707.txt", "type": "text"},
         {"name": "Greek_Mythology_Bulfinch", "url": "https://www.gutenberg.org/cache/epub/4928/pg4928.txt", "type": "text"},
-        {"name": "ArXiv_DigitalHistory", "url": "https://export.arxiv.org/api/query?search_query=historical+analysis+computational&max_results=50&sortBy=submittedDate", "type": "arxiv"},,
+        {"name": "ArXiv_DigitalHistory", "url": "https://export.arxiv.org/api/query?search_query=historical+analysis+computational&max_results=50&sortBy=submittedDate", "type": "arxiv"},
 
         {"name": "Sun_Tzu_Art_of_War", "url": "https://www.gutenberg.org/cache/epub/132/pg132.txt", "type": "text"},
         {"name": "Machiavelli_Prince", "url": "https://www.gutenberg.org/cache/epub/1232/pg1232.txt", "type": "text"},
