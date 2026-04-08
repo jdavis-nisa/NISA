@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { BarChart2, RefreshCw, Zap } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, RadialLinearScale, Title, Tooltip, Legend, Filler } from "chart.js"
 import { Bar, Line, Pie, Radar } from "react-chartjs-2"
 
@@ -58,9 +58,9 @@ export default function Charts() {
     setAnalyticsLoading(true)
     try {
       const [audit, routing, memory] = await Promise.all([
-        axios.get(`${VIZ_API}/prebuilt/audit_events`).catch(() => null),
-        axios.get(`${VIZ_API}/prebuilt/model_routing`).catch(() => null),
-        axios.get(`${VIZ_API}/prebuilt/memory_growth`).catch(() => null),
+        api.get(`${VIZ_API}/prebuilt/audit_events`).catch(() => null),
+        api.get(`${VIZ_API}/prebuilt/model_routing`).catch(() => null),
+        api.get(`${VIZ_API}/prebuilt/memory_growth`).catch(() => null),
       ])
       if (audit?.data?.chart?.data?.[0]) {
         const t = audit.data.chart.data[0]
@@ -85,7 +85,7 @@ export default function Charts() {
     setLoading(true)
     setNaturalChart(null)
     try {
-      const res = await axios.post(`${VIZ_API}/natural`, { prompt })
+      const res = await api.post(`${VIZ_API}/natural`, { prompt })
       const trace = res.data?.chart?.data?.[0]
       if (trace) {
         const type = trace.type

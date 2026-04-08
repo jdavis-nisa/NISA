@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { FileText, Download, RefreshCw, CheckCircle } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 
 const NLU_API = "http://localhost:8081"
 
@@ -14,7 +14,7 @@ export default function Compliance() {
   const fetchAudit = async () => {
     setLoading(true)
     try {
-      const res = await axios.get(`${NLU_API}/audit`)
+      const res = await api.get(`${NLU_API}/audit`)
       setAuditRows(res.data.entries || [])
     } catch (e) {
       // Audit endpoint may not exist yet - show empty state
@@ -30,7 +30,7 @@ export default function Compliance() {
     setGenerated(false)
     setError(null)
     try {
-      const res = await axios.post(`${NLU_API}/compliance/generate`)
+      const res = await api.post(`${NLU_API}/compliance/generate`)
       setGenerated(true)
     } catch (e) {
       // Fall back to showing success since we can generate from Terminal

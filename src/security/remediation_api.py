@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException, FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import subprocess
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv(os.path.expanduser("~/NISA/.env"))
 import uuid
 import tempfile
 import hashlib
@@ -12,6 +15,20 @@ from datetime import datetime
 from openai import OpenAI
 
 app = FastAPI(title="NISA Remediation API", version="0.1.0")
+
+# ── API Key Authentication ────────────────────────────────────────
+NISA_API_KEY = os.environ.get("NISA_API_KEY", "")
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    if request.url.path in ("/health", "/waveform_types"):
+        return await call_next(request)
+    if NISA_API_KEY:
+        key = request.headers.get("X-NISA-API-Key", "")
+        if key != NISA_API_KEY:
+            return JSONResponse(status_code=403, content={"error": "Invalid or missing API key"})
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -432,4 +449,4 @@ def generate_report(session_id: str, remediation_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8086)
+    uvicorn.run(app, host="127.0.0.1", port=8086)

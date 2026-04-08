@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Shield, Radar, Globe, ChevronRight, AlertTriangle, CheckCircle, Info, Activity } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 
 const SEC_API = "http://localhost:8082"
 const IDS_API = "http://localhost:8085"
@@ -70,9 +70,9 @@ function NmapPanel() {
     setResult(null)
     setError(null)
     try {
-      const tokenRes = await axios.post(`${SEC_API}/token`, { tool: "nmap" })
+      const tokenRes = await api.post(`${SEC_API}/token`, { tool: "nmap" })
       const token = tokenRes.data.token
-      const scanRes = await axios.post(
+      const scanRes = await api.post(
         `${SEC_API}/scan/nmap?token=${token}`,
         { target, scan_type: scanType }
       )
@@ -182,9 +182,9 @@ function ZapPanel() {
     setResult(null)
     setError(null)
     try {
-      const tokenRes = await axios.post(`${SEC_API}/token`, { tool: "zap" })
+      const tokenRes = await api.post(`${SEC_API}/token`, { tool: "zap" })
       const token = tokenRes.data.token
-      const scanRes = await axios.post(
+      const scanRes = await api.post(
         `${SEC_API}/scan/zap?token=${token}`,
         { target }
       )
@@ -523,19 +523,19 @@ function SuricataPanel() {
   const [analyzing, setAnalyzing] = useState(false)
 
   const fetchStatus = async () => {
-    try { const r = await axios.get(`${IDS_API}/status`); setStatus(r.data) } catch(e) {}
+    try { const r = await api.get(`${IDS_API}/status`); setStatus(r.data) } catch(e) {}
   }
   const fetchAlerts = async (analyze = false) => {
     if (analyze) setAnalyzing(true)
     try {
-      const r = await axios.get(`${IDS_API}/alerts?analyze=${analyze}&limit=20`)
+      const r = await api.get(`${IDS_API}/alerts?analyze=${analyze}&limit=20`)
       setAlerts(r.data.alerts || [])
       if (analyze) setAnalysis(r.data.analysis || "")
     } catch(e) {}
     if (analyze) setAnalyzing(false)
   }
   const runTest = async () => {
-    try { await axios.post(`${IDS_API}/test`); fetchAlerts(false) } catch(e) {}
+    try { await api.post(`${IDS_API}/test`); fetchAlerts(false) } catch(e) {}
   }
 
   useEffect(() => {

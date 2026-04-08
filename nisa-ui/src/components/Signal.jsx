@@ -1,5 +1,5 @@
 import { useState } from "react"
-import axios from "axios"
+import api from "../api"
 
 const API = "http://localhost:8088"
 
@@ -150,7 +150,7 @@ function WaveformTab() {
   const run = async () => {
     setLoading(true); setError("")
     try {
-      const res = await axios.post(`${API}/waveform`, {
+      const res = await api.post(`${API}/waveform`, {
         ...form,
         frequency: parseFloat(form.frequency),
         duration: parseFloat(form.duration),
@@ -204,7 +204,7 @@ function FFTTab() {
   const run = async () => {
     setLoading(true); setError("")
     try {
-      const res = await axios.post(`${API}/fft`, {
+      const res = await api.post(`${API}/fft`, {
         ...form,
         frequency: parseFloat(form.frequency),
         duration: parseFloat(form.duration),
@@ -256,7 +256,7 @@ function FilterTab() {
   const run = async () => {
     setLoading(true); setError("")
     try {
-      const res = await axios.post(`${API}/filter`, {
+      const res = await api.post(`${API}/filter`, {
         ...form,
         cutoff_freq: parseFloat(form.cutoff_freq),
         cutoff_freq2: parseFloat(form.cutoff_freq2),
@@ -312,7 +312,7 @@ function AmbiguityTab() {
   const run = async () => {
     setLoading(true); setError("")
     try {
-      const res = await axios.post(`${API}/ambiguity`, {
+      const res = await api.post(`${API}/ambiguity`, {
         ...form,
         frequency: parseFloat(form.frequency),
         bandwidth: parseFloat(form.bandwidth),
@@ -390,7 +390,7 @@ disp(["Time-bandwidth product: ", num2str((f1-f0)*T)]);`)
   const run = async () => {
     setLoading(true); setError("")
     try {
-      const res = await axios.post(`${API}/octave`, { code, description: "Octave execution" })
+      const res = await api.post(`${API}/octave`, { code, description: "Octave execution" })
       setResult(res.data)
     } catch(e) {
       setError(e.response?.data?.detail || e.message)

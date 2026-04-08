@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Shield, Play, Clock, TrendingUp, ChevronRight, CheckCircle, XCircle, Minus, RefreshCw } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 const RT_API = "http://localhost:8084"
@@ -21,7 +21,7 @@ export default function RedTeam() {
     if (activeSession && liveData?.status === "running") {
       pollRef.current = setInterval(async () => {
         try {
-          const res = await axios.get(`${RT_API}/session/${activeSession}`)
+          const res = await api.get(`${RT_API}/session/${activeSession}`)
           setLiveData(res.data)
           if (res.data.status !== "running") {
             clearInterval(pollRef.current)
@@ -36,21 +36,21 @@ export default function RedTeam() {
 
   const fetchSessions = async () => {
     try {
-      const res = await axios.get(`${RT_API}/sessions`)
+      const res = await api.get(`${RT_API}/sessions`)
       setSessions(res.data.sessions || [])
     } catch (e) {}
   }
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${RT_API}/history`)
+      const res = await api.get(`${RT_API}/history`)
       setHistory(res.data.history || [])
     } catch (e) {}
   }
 
   const launchAttack = async (config) => {
     try {
-      const res = await axios.post(`${RT_API}/run`, config)
+      const res = await api.post(`${RT_API}/run`, config)
       const sid = res.data.session_id
       setActiveSession(sid)
       setLiveData({ status: "running", turns: [], score_passed: 0, score_total: 0 })
@@ -93,7 +93,7 @@ export default function RedTeam() {
       {/* Panel 3 - History */}
       <HistoryPanel sessions={sessions} onRefresh={fetchSessions} onSelect={(sid) => {
         setActiveSession(sid)
-        axios.get(`${RT_API}/session/${sid}`).then(r => setLiveData(r.data))
+        api.get(`${RT_API}/session/${sid}`).then(r => setLiveData(r.data))
       }} />
 
       {/* Regression Chart */}

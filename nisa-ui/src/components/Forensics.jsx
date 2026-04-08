@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Search, FileSearch, Hash, Clock, AlertTriangle, CheckCircle, ChevronRight, Network } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 
 const FORENSICS_API = "http://localhost:8083"
 
@@ -72,7 +72,7 @@ function LogAnalysisPanel() {
     setResult(null)
     setError(null)
     try {
-      const res = await axios.post(`${FORENSICS_API}/analyze/logs`, {
+      const res = await api.post(`${FORENSICS_API}/analyze/logs`, {
         log_text: logText,
         log_type: logType
       })
@@ -272,7 +272,7 @@ function IOCPanel() {
     setResult(null)
     setError(null)
     try {
-      const res = await axios.post(`${FORENSICS_API}/extract/iocs`, { text })
+      const res = await api.post(`${FORENSICS_API}/extract/iocs`, { text })
       setResult(res.data)
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
@@ -372,7 +372,7 @@ function HashPanel() {
     setResult(null)
     setError(null)
     try {
-      const res = await axios.post(`${FORENSICS_API}/hash/file`, {
+      const res = await api.post(`${FORENSICS_API}/hash/file`, {
         file_path: filePath,
         expected_hash: expectedHash || null
       })
@@ -464,7 +464,7 @@ function PcapPanel() {
     setResult(null)
     setError(null)
     try {
-      const res = await axios.post(`${FORENSICS_API}/analyze/pcap`, {
+      const res = await api.post(`${FORENSICS_API}/analyze/pcap`, {
         pcap_path: filePath,
         max_packets: 1000
       })

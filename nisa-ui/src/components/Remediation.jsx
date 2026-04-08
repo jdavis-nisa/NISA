@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 
@@ -67,7 +67,7 @@ export default function Remediation() {
     if (!applyFile.trim()) return
     setApplying(true)
     try {
-      const res = await axios.post(`${REM_API}/apply`, {
+      const res = await api.post(`${REM_API}/apply`, {
         session_id: session.session_id,
         remediation_id: result.remediation_id,
         target_file: applyFile,
@@ -98,7 +98,7 @@ export default function Remediation() {
     setLoading(true)
     setError(null)
     try {
-      const res = await axios.post(`${REM_API}/authorize`, authForm)
+      const res = await api.post(`${REM_API}/authorize`, authForm)
       setSession(res.data)
       setStep("remediate")
     } catch (e) {
@@ -112,7 +112,7 @@ export default function Remediation() {
     setError(null)
     setResult(null)
     try {
-      const res = await axios.post(`${REM_API}/remediate`, {
+      const res = await api.post(`${REM_API}/remediate`, {
         session_id: session.session_id,
         ...vulnForm
       })

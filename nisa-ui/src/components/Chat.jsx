@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Send, Cpu, Zap, Brain, Copy, Check, Mic, MicOff, Save, Clock } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
@@ -27,7 +27,7 @@ export default function Chat() {
   const loadHistory = async () => {
     setHistoryLoading(true)
     try {
-      const res = await axios.get(`${NLU_API}/history?limit=200`)
+      const res = await api.get(`${NLU_API}/history?limit=200`)
       setHistory(res.data.sessions || [])
     } catch (e) {}
     setHistoryLoading(false)
@@ -65,7 +65,7 @@ export default function Chat() {
         const formData = new FormData()
         formData.append("audio", blob, "voice.webm")
         try {
-          const res = await axios.post(`${NLU_API}/voice`, formData, {
+          const res = await api.post(`${NLU_API}/voice`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
           })
           if (res.data.transcript) {
@@ -99,7 +99,7 @@ export default function Chat() {
     setMessages(prev => [...prev, { role: "user", content: text }])
     setLoading(true)
     try {
-      const res = await axios.post(`${NLU_API}/chat`, { message: text })
+      const res = await api.post(`${NLU_API}/chat`, { message: text })
       setMessages(prev => [...prev, {
         role: "assistant",
         content: res.data.response,
@@ -312,7 +312,7 @@ function CodeBlock({ language, children }) {
     try {
       const ext = language || "txt"
       const filename = `nisa_code_${Date.now()}.${ext}`
-      const res = await axios.post("http://localhost:8081/save_code", {
+      const res = await api.post("http://localhost:8081/save_code", {
         content: String(children),
         filename,
         domain_path: domain.path,

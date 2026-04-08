@@ -118,7 +118,7 @@ fi
 # ── Step 10: Signal Processing API ──────────────────────────────
 echo "[ 10/11 ] Starting Signal Processing API (port 8088)..."
 lsof -ti:8088 | xargs kill -9 2>/dev/null || true
-python3.11 "/src/core/signal_api.py" > "/logs/signal_api.log" 2>&1 &
+python3.11 "$NISA_DIR/src/core/signal_api.py" > "$NISA_DIR/logs/signal_api.log" 2>&1 &
 SIG_PID=70647
 sleep 3
 if curl -s http://localhost:8088/health > /dev/null 2>&1; then

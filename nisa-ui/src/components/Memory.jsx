@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Brain, Search, RefreshCw, Database } from "lucide-react"
-import axios from "axios"
+import api from "../api"
 
 const NLU_API = "http://localhost:8081"
 
@@ -16,7 +16,7 @@ export default function Memory() {
     setLoading(true)
     setError(null)
     try {
-      const res = await axios.get(`${NLU_API}/memory`)
+      const res = await api.get(`${NLU_API}/memory`)
       setMemories(res.data.entries || [])
       setFiltered(res.data.entries || [])
       setStats(res.data.stats || null)
@@ -33,7 +33,7 @@ export default function Memory() {
     }
     setLoading(true)
     try {
-      const res = await axios.post(`${NLU_API}/memory/search`, { query: search })
+      const res = await api.post(`${NLU_API}/memory/search`, { query: search })
       setFiltered(res.data.results || [])
     } catch (e) {
       // Fall back to client-side filter
