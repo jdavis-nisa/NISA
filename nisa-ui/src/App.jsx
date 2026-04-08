@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2 } from "lucide-react"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
 import Compliance from "./components/Compliance"
 import Remediation from "./components/Remediation"
+import Charts from "./components/Charts"
 import Forensics from "./components/Forensics"
 import Memory from "./components/Memory"
 import RedTeam from "./components/RedTeam"
@@ -24,6 +25,7 @@ function App() {
               <Route path="/memory" element={<Memory />} />
               <Route path="/redteam" element={<RedTeam />} />
               <Route path="/remediation" element={<Remediation />} />
+              <Route path="/charts" element={<Charts />} />
               <Route path="/compliance" element={<Compliance />} />
             </Routes>
           </main>
@@ -128,6 +130,7 @@ function Sidebar() {
     { to: "/memory", icon: Brain, label: "MEMORY", sublabel: "ChromaDB Explorer" },
     { to: "/redteam", icon: Crosshair, label: "RED TEAM", sublabel: "Attack & Evaluate" },
     { to: "/remediation", icon: Shield, label: "REMEDIATION", sublabel: "Patch & Verify" },
+    { to: "/charts", icon: BarChart2, label: "VISUALIZE", sublabel: "Charts & Analytics" },
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
   ]
   return (
