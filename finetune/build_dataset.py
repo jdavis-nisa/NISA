@@ -85,10 +85,14 @@ def load_domain_documents(domain: str) -> list:
     
     supported = {".txt", ".md", ".py", ".json"}
     
+    seen_filenames = set()
     for root, dirs, files in os.walk(domain_path):
         dirs[:] = [d for d in dirs if d not in ["output", "cache", "logs", "prompts"]]
         for fname in files:
             if fname.startswith("."):
+                continue
+            if fname in seen_filenames:
+                print(f"  Skip duplicate: {fname}")
                 continue
             ext = os.path.splitext(fname)[1].lower()
             if ext not in supported:
@@ -98,6 +102,7 @@ def load_domain_documents(domain: str) -> list:
                 with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
                 if len(content.strip()) > 100:
+                    seen_filenames.add(fname)
                     documents.append({"content": content, "source": fname, "domain": domain})
                     print(f"  Loaded: {fname} ({len(content)} chars)")
             except Exception as e:

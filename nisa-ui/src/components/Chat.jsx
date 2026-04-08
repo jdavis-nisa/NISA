@@ -98,23 +98,72 @@ export default function Chat() {
     setInput("")
     setMessages(prev => [...prev, { role: "user", content: text }])
     setLoading(true)
+
+    const assistantIdx = Date.now()
+    setMessages(prev => [...prev, {
+      role: "assistant", content: "", model: "...", moa: false,
+      reason: "routing", streaming: true, id: assistantIdx
+    }])
+
     try {
-      const res = await api.post(`${NLU_API}/chat`, { message: text })
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: res.data.response,
-        model: res.data.model_used,
-        moa: res.data.moa_used,
-        reason: res.data.routing_reason,
-      }])
+      const NISA_API_KEY = "d551fd7e05134c52b84286c201f0f36d8ddeb5e0611ed771ba44d6a4264f39cf"
+      const response = await fetch(`${NLU_API}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-NISA-API-Key": NISA_API_KEY,
+        },
+        body: JSON.stringify({ message: text }),
+      })
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let modelUsed = "..."
+      let reasonUsed = ""
+      let fullContent = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === "meta") {
+              modelUsed = data.model
+              reasonUsed = data.reason
+              setMessages(prev => prev.map(m =>
+                m.id === assistantIdx ? { ...m, model: data.model, reason: data.reason } : m
+              ))
+            } else if (data.type === "token") {
+              fullContent += data.token
+              setMessages(prev => prev.map(m =>
+                m.id === assistantIdx ? { ...m, content: fullContent } : m
+              ))
+            } else if (data.type === "done") {
+              setMessages(prev => prev.map(m =>
+                m.id === assistantIdx ? { ...m, streaming: false } : m
+              ))
+            } else if (data.type === "error") {
+              setMessages(prev => prev.map(m =>
+                m.id === assistantIdx ? { ...m, content: data.error, streaming: false } : m
+              ))
+            }
+          } catch {}
+        }
+      }
     } catch (e) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Connection error. Verify NLU API is running on port 8081.",
-        model: "error",
-        moa: false,
-        reason: "error",
-      }])
+      setMessages(prev => prev.map(m =>
+        m.id === assistantIdx ? {
+          ...m, content: "Connection error. Verify NLU API is running on port 8081.",
+          model: "error", streaming: false
+        } : m
+      ))
     }
     setLoading(false)
   }
