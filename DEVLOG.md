@@ -705,3 +705,34 @@ REMAINING:
 - Conversation history browser (Option A)
 - Chart/graphic generator
 - Data visualization
+
+### Session 7 final wrap - April 8, 2026
+
+#### Conversation History Browser
+- /history endpoint added to NLU API
+- Groups ChromaDB entries by session_id
+- Returns sessions sorted by most recent
+- Modal overlay in Chat UI with session list
+- Click any session to reload conversation
+- 198 messages in default session, 2 in test_session confirmed
+
+#### Chart/Visualization - TODO tomorrow
+
+#### Current NISA Tab Structure
+1. CHAT - with History modal and Save to NISA code blocks
+2. SECURITY - Nmap, ZAP, Suricata IDS
+3. FORENSICS - Log Analysis, IOC, File Hash, PCAP
+4. MEMORY - ChromaDB Explorer
+5. RED TEAM - PyRIT, OWASP, Garak
+6. REMEDIATION - Authorize, Analyze, Results, Apply, PDF
+7. COMPLIANCE - Audit Reports
+
+#### Tomorrow
+- Dad's radar papers and programs
+- Web scraper for NIST/MITRE/DTIC
+- Security hardening and access audit
+- Chart/visualization generator
+- Electron desktop app
+- Demo video prep
+- Terminal commands reference document
+- Technical manual outline
