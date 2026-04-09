@@ -12,6 +12,7 @@ import RedTeam from "./components/RedTeam"
 import Signal from "./components/Signal"
 import Metasploit from "./components/Metasploit"
 import NetworkTopology from './components/NetworkTopology'
+import ThreatIntel from './components/ThreatIntel'
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
               <Route path="/signal" element={<Signal />} />
               <Route path="/metasploit" element={<Metasploit />} />
               <Route path="/topology" element={<NetworkTopology standalone={true} />} />
+              <Route path="/threatintel" element={<ThreatIntel />} />
             </Routes>
           </main>
         </div>
@@ -143,6 +145,7 @@ function Sidebar() {
     { to: "/signal", icon: Activity, label: "SIGNAL", sublabel: "Waveform & Radar" },
     { to: "/metasploit", icon: Shield, label: "METASPLOIT", sublabel: "Exploit Framework" },
     { to: "/topology", icon: Shield, label: "TOPOLOGY", sublabel: "Network Graph" },
+    { to: "/threatintel", icon: Shield, label: "THREAT INTEL", sublabel: "CVE & ATT&CK" },
   ]
   return (
     <nav style={{

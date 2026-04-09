@@ -140,7 +140,7 @@ else
 fi
 
 # ── Step 12: Signal Processing API ──────────────────────────────
-echo "[ 12/13 ] Starting Signal Processing API (port 8088)..."
+echo "[ 13/14 ] Starting Signal Processing API (port 8088)..."
 lsof -ti:8088 | xargs kill -9 2>/dev/null || true
 python3.11 "$NISA_DIR/src/core/signal_api.py" > "$NISA_DIR/logs/signal_api.log" 2>&1 &
 SIG_PID=70647
@@ -152,7 +152,7 @@ else
 fi
 
 # ── Step 11: Phoenix ──────────────────────────────────────────────
-echo "[ 13/13 ] Starting Arize Phoenix (port 6006)..."
+echo "[ 14/14 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5
