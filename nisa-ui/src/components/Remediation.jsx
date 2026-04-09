@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { pushContext } from "../SessionContext"
 import { useLocation } from "react-router-dom"
 import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
-import api from "../api"
+import api, { NISA_API_KEY } from "../api"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 
@@ -376,9 +376,22 @@ export default function Remediation() {
           )}
 
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <button onClick={() => {
-              const url = `${REM_API}/report/${session.session_id}/${result.remediation_id}`
-              window.open(url, "_blank")
+            <button onClick={async () => {
+              try {
+                const url = `${REM_API}/report/${session.session_id}/${result.remediation_id}`
+                const res = await fetch(url, {
+                  headers: { "X-NISA-API-Key": NISA_API_KEY }
+                })
+                if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                const blob = await res.blob()
+                const a = document.createElement("a")
+                a.href = URL.createObjectURL(blob)
+                a.download = `NISA_Remediation_Report_${result.remediation_id}.pdf`
+                a.click()
+                URL.revokeObjectURL(a.href)
+              } catch(e) {
+                alert("PDF download failed: " + e.message)
+              }
             }} style={btnStyle("var(--success)")}>
               <Download size={12} /> DOWNLOAD PDF REPORT
             </button>

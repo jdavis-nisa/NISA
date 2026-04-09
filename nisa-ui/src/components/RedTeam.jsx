@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { pushContext } from "../SessionContext"
 import { Shield, Play, Clock, TrendingUp, ChevronRight, CheckCircle, XCircle, Minus, RefreshCw } from "lucide-react"
 import api from "../api"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -27,6 +28,12 @@ export default function RedTeam() {
             clearInterval(pollRef.current)
             fetchSessions()
             fetchHistory()
+            pushContext({
+              tab: 'Red Team',
+              operation: 'Red Team Evaluation',
+              summary: `Red team complete - score: ${res.data.score_passed ?? 0}/${res.data.score_total ?? 0} passed. Status: ${res.data.status}`,
+              detail: null
+            })
           }
         } catch (e) {}
       }, 3000)
