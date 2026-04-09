@@ -1030,3 +1030,97 @@ Comprehensive 20-minute demo script written for:
 - Voice TTS/STT in Electron app
 - Additional Kali tools wiring
 - M5 migration when machine arrives
+
+---
+
+## Session 10 — April 9, 2026
+
+### New Tabs Built (5 major features)
+
+**Network Topology Visualization**
+- D3.js interactive network graph from Nmap scan results
+- Risk-colored nodes (critical/high/medium/low) with drag support
+- Node detail panel with IP, risk level, open ports
+- Stats dashboard: hosts, open ports, critical, high risk
+- RedSage threat analysis below graph
+- Hostname parsing fixed for "hostname (ip)" format
+- Route: /topology
+
+**Scan-to-Remediation Bridge**
+- REMEDIATE button on each port in Topology node detail panel
+- Uses React Router navigate() with router state — no localStorage/sessionStorage
+- Pre-populates: vulnerability description, affected component, target IP in auth form
+- useEffect triggers on step change to 'analyze'
+
+**Threat Intelligence Tab**
+- 100% local — zero external calls — SOURCE: LOCAL badge
+- Overview: stats from local knowledge files
+- CVE Search: searches NIST_NVD_CVE knowledge file
+- MITRE ATT&CK Search: searches MITRE_ATTACK knowledge file
+- Tactic Matrix: 14 MITRE ATT&CK tactics as clickable cards
+- API: threatintel_api.py port 8093
+- Route: /threatintel
+
+**Signal Processing Enhancements**
+- Waveform Library tab: 4 named waveforms (LFM, Barker-13, CW, Rectangular)
+- Each with category, description, use case, properties
+- Range-Doppler Map tab: GNU Octave simulation
+- Parameters: waveform type, frequency, bandwidth, num pulses, PRF, SNR, target range/velocity
+- Signal API updated: Octave endpoint now returns image field from /tmp/nisa_rdmap.png
+- Signal API host fixed: 127.0.0.1
+
+**Adversarial Simulation Engine**
+- 8 threat actor profiles: APT28, APT29, Lazarus, APT41, FIN7, Ransomware, Insider, Custom
+- Input: target description + optional network context + threat actor selection
+- Output: full kill chain JSON with red team + blue team per step
+- Each step: MITRE tactic/technique IDs, tools, commands, detection queries, gaps
+- Coverage stats: detected/partial/blind spots
+- Defensive gaps and immediate recommendations sections
+- API: adversarial_api.py port 8094
+- Timeout: 300 seconds, max_tokens: 3500
+- Route: /adversarial
+
+### Infrastructure Fixes
+- CORS systemwide fix: all 10 APIs updated to allow 5173, 5174, 5175, 5176
+- Context length hardcoded to 32768 via extra_body in both streaming and non-streaming calls
+- LM Studio slider no longer matters — API overrides every call
+- Signal API host binding fixed: 0.0.0.0 -> 127.0.0.1
+- start_nisa.sh updated: now starts 15 services including Threat Intel and Adversarial APIs
+- safe_targets fix in security_api.py for proper subnet matching
+
+### Nisaba Soul Session
+- 7 soul documents written and integrated
+- System prompt fully expanded with identity, Josh's story, NISA architecture, values
+- Memory integrity constraints added — no hallucinated memories
+- 15 foundational memories seeded into ChromaDB (1,062 total)
+- Phi-4 restored as coding model
+
+### Leidos Meeting Preparation
+- 50 Q&A document: NISA_Leidos_QA.docx + .md
+- Covers post-quantum encryption, remediation workflow, network scanning,
+  Metasploit, AI architecture, signal processing, compliance, deployment,
+  tough competitive questions, demo flow
+
+### Current Tab Count: 15
+Chat, Security, Forensics, Memory, Red Team, Remediation, Visualize,
+Compliance, Signal (7 sub-tabs), Metasploit, Topology, Threat Intel, Adversarial
+
+### Port Map (15 services)
+NLU 8081, Security 8082, Forensics 8083, Red Team 8084, Suricata 8085,
+Remediation 8086, Visualization 8087, Signal 8088, Metasploit 8089,
+Terminal 8091, Threat Intel 8093, Adversarial 8094,
+LM Studio 1234, PostgreSQL 5432, ChromaDB 8000, Redis 6379, Phoenix 6006
+
+### Remaining Priority Items
+- Playbook Engine
+- Asset Inventory
+- CVE Watchlist
+- Attack Surface Map
+- Natural Language Network Queries
+- Risk Scoring Engine
+- SSH Remote Patching
+- EW Threat Analysis + LPI Waveform Classifier
+- GraphRAG indexing remaining 7 domains
+- Fine-tuning pipeline
+- Demo video (last)
+- M5 migration
