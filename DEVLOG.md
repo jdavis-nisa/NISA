@@ -928,3 +928,50 @@ Comprehensive 20-minute demo script written for:
 6. Fine-tune Phi-4 after knowledge library fully populated
 7. Kali Linux Docker + Metasploit
 8. React Native mobile app
+
+---
+
+## Session 9 — April 9, 2026
+
+### Major Completions
+- Live msfconsole terminal via xterm.js + WebSocket PTY server (port 8091)
+- PTY-based subprocess bridging replacing broken pipe approach
+- Electron desktop app — NISA-0.0.0-arm64.dmg, native Mac app working
+- Streaming chat working in packaged Electron app (allowRunningInsecureContent fix)
+- HashRouter + base "./" for file:// protocol compatibility
+- knowledge_query.py expanded from 5 to 32 domains with phrase-based routing
+- Patent portfolio — 5 USPTO-compliant technical disclosures (DOCX + PDF)
+- GraphRAG setup for 10 new domains (settings.yaml + prompts + input/ structure)
+- All APIs bound to 127.0.0.1, allowRunningInsecureContent in Electron
+- Git history cleaned — large Electron build artifacts removed via filter-branch
+- start_nisa.sh updated to 13 steps including terminal server (port 8091)
+- ZAP port conflict resolved (ZAP on 8090, terminal server moved to 8091)
+
+### Dad Meeting
+- Senior radar engineer father reviewed NISA demo
+- Immediately set up meetings for Josh to demo NISA to defense contacts
+- Purchased M5 MacBook Pro Max on the spot
+- Patent portfolio reviewed — USPTO provisional filings recommended
+
+### GraphRAG Status
+- Fully indexed: security, radar_ew, general, nisaba_soul, nisa_docs
+- Completed this session: health (partial), creative_writing (partial)
+- Failed (LM Studio overload): spiritual_advanced, mathematics_advanced, physics_advanced, quantum_advanced, music, gardening, social_dynamics
+- Action: retry failed domains one at a time in next session
+
+### Bookmarked
+- NISA coding standards in system prompt + nisa_docs domain
+- Security tools knowledge scrape (Linux, Kali, Metasploit, Burp, multilanguage)
+- Nisaba soul session (separate thread)
+- GraphRAG re-index 6 failed domains
+- Fine-tuning pipeline
+- Demo video recording
+- React Native mobile app
+- Dad radar papers ingestion
+- M5 MacBook migration
+
+### Ports (current)
+- 8081 NLU, 8082 Security, 8083 Forensics, 8084 Red Team, 8085 Suricata
+- 8086 Remediation, 8087 Visualization, 8088 Signal, 8089 Metasploit
+- 8090 ZAP (Docker), 8091 Terminal Server (WebSocket PTY)
+- 6006 Phoenix, 5173 Vite UI
