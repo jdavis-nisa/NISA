@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { pushContext } from "../SessionContext"
 import api from "../api"
 
 const API = "http://localhost:8088"
@@ -163,6 +164,7 @@ function WaveformTab() {
         bandwidth: parseFloat(form.bandwidth),
       })
       setResult(res.data)
+      pushContext({ tab: 'Signal', operation: `Waveform Generation`, summary: `Waveform generated - type: ${form.waveform_type || 'LFM'}, sample rate: ${form.sample_rate} Hz, bandwidth: ${form.bandwidth} Hz`, detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -704,6 +706,7 @@ disp(sprintf('Num pulses: %d', N));
 `
       const rdRes = await api.post(`${API}/octave`, { code: octave_code })
       setResult({ ...res.data, rdmap_output: rdRes.data.output, rdmap_image: rdRes.data.image })
+      pushContext({ tab: 'Signal', operation: 'Range-Doppler Map', summary: `Range-Doppler map generated. ${res.data.waveform_type || ''} waveform, Octave simulation complete.`.trim(), detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { pushContext } from "../SessionContext"
 import { Shield, Radar, Globe, ChevronRight, AlertTriangle, CheckCircle, Info, Activity } from "lucide-react"
 import api from "../api"
 
@@ -79,6 +80,13 @@ function NmapPanel() {
         { target, scan_type: scanType }
       )
       setResult(scanRes.data)
+      const d = scanRes.data
+      pushContext({
+        tab: "Security",
+        operation: `Nmap ${scanType.toUpperCase()} Scan`,
+        summary: `Target: ${d.target} - ${d.ports?.length ?? 0} open ports. ${d.summary || ""}`.trim(),
+        detail: { target: d.target, ports: d.ports, scan_type: scanType }
+      })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }

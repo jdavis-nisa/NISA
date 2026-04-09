@@ -1,3 +1,4 @@
+import { pushContext } from "../SessionContext"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import * as d3 from "d3"
@@ -167,6 +168,12 @@ export default function NetworkTopology({ scanData, standalone = false }) {
       )
       const graph = buildGraph(res.data)
       setGraphData(graph)
+      pushContext({
+        tab: 'Topology',
+        operation: `Nmap ${scanType.toUpperCase()} Topology Scan`,
+        summary: `Topology scan of ${target} - ${graph.stats?.hosts ?? 0} hosts, ${graph.stats?.openPorts ?? 0} open ports, ${graph.stats?.critical ?? 0} critical`,
+        detail: null
+      })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { pushContext } from "../SessionContext"
 import api from "../api"
 
 const ADV_API = "http://localhost:8094"
@@ -46,6 +47,7 @@ export default function AdversarialSim() {
         simulation_depth: "standard"
       })
       setResult(res.data)
+      pushContext({ tab: 'Adversarial', operation: `${selectedActor} Kill Chain Simulation`, summary: `${selectedActor} simulation complete - ${res.data.steps?.length ?? 6} steps generated. ${res.data.coverage?.blind_spots ?? 0} blind spots identified.`, detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }

@@ -31,8 +31,9 @@ lsof -ti:8081 | xargs kill -9 2>/dev/null || true
 lsof -ti:8082 | xargs kill -9 2>/dev/null || true
 lsof -ti:8083 | xargs kill -9 2>/dev/null || true
 lsof -ti:6006 | xargs kill -9 2>/dev/null || true
+lsof -ti:8095 | xargs kill -9 2>/dev/null || true
 sleep 1
-echo "       Ports 8081, 8082, 8083, 6006 cleared"
+echo "       Ports 8081, 8082, 8083, 6006, 8095 cleared"
 
 # ── Step 3: NLU API ──────────────────────────────────────────────
 echo "[ 3/6 ] Starting NLU API (port 8081)..."
@@ -156,8 +157,25 @@ else
     echo "       Signal Processing API failed to start - check logs/signal_api.log"
 fi
 
-# ── Step 11: Phoenix ──────────────────────────────────────────────
-echo "[ 15/15 ] Starting Arize Phoenix (port 6006)..."
+# ── Step 13: Session Context API ────────────────────────────────
+echo "[ 13/16 ] Starting Session Context API (port 8095)..."
+python3.11 "$NISA_DIR/src/core/session_context_api.py" > "$NISA_DIR/logs/session_context_api.log" 2>&1 &
+SCA_PID=$!
+sleep 2
+if curl -s http://127.0.0.1:8095/health > /dev/null 2>&1; then
+    echo "       Session Context API online - PID $SCA_PID"
+else
+    echo "       Session Context API failed to start - check logs/session_context_api.log"
+fi
+
+# ── Step 14: Threat Intel API ────────────────────────────────────
+# (started separately if present)
+
+# ── Step 15: Adversarial API ─────────────────────────────────────
+# (started separately if present)
+
+# ── Step 16: Phoenix ─────────────────────────────────────────────
+echo "[ 16/16 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5
@@ -182,6 +200,7 @@ echo "║  Visualize    http://localhost:8087      ║"
 echo "║  Metasploit   http://localhost:8089      ║"
 echo "║  Terminal     ws://localhost:8091       ║"
 echo "║  Signal Proc  http://localhost:8088      ║"
+echo "║  Session Ctx  http://localhost:8095      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"

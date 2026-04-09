@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { pushContext } from "../SessionContext"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
 import "@xterm/xterm/css/xterm.css"
@@ -295,6 +296,7 @@ function SearchTab() {
     try {
       const res = await api.post(`${MSF_API}/search`, { query, limit: 30 })
       setResults(res.data)
+      pushContext({ tab: 'Metasploit', operation: 'Module Search', summary: `Metasploit search: '${query}' - ${res.data.results?.length ?? 0} modules found`, detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -345,6 +347,7 @@ function CVETab() {
     try {
       const res = await api.post(`${MSF_API}/search/cve`, { query: cve, limit: 20 })
       setResults(res.data)
+      pushContext({ tab: 'Metasploit', operation: 'CVE Lookup', summary: `CVE lookup: ${cve} - ${res.data.results?.length ?? 0} modules found`, detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -395,6 +398,7 @@ function InfoTab() {
     try {
       const res = await api.post(`${MSF_API}/info`, { module_path: module })
       setResult(res.data)
+      pushContext({ tab: 'Metasploit', operation: 'Module Info', summary: `Module info: ${module} - ${res.data.name || 'retrieved'}`, detail: null })
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }

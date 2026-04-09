@@ -12,6 +12,8 @@ import sys
 sys.path.insert(0, '/Users/joshuadavis/NISA/src/core')
 from memory import store_exchange, recall_relevant, format_memory_context
 from moa_pipeline import run_moa, should_use_moa
+import httpx
+
 try:
     from knowledge_query import get_knowledge_context
     KNOWLEDGE_ENABLED = True
@@ -26,6 +28,8 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from openinference.instrumentation.openai import OpenAIInstrumentor
 
 # ── Phoenix Observability ─────────────────────────────────────────
+import httpx
+
 try:
     exporter = OTLPSpanExporter(endpoint="http://localhost:6006/v1/traces")
     provider = TracerProvider()
@@ -239,6 +243,16 @@ def chat(request: ChatRequest):
                         system_prompt += f"\n\nRELEVANT KNOWLEDGE BASE CONTEXT:\n{knowledge_context[:2000]}"
                 except Exception:
                     pass
+
+            # Inject session context if available
+            try:
+                ctx_res = httpx.get("http://127.0.0.1:8095/context/summary", timeout=2.0)
+                if ctx_res.status_code == 200:
+                    ctx_summary = ctx_res.json().get("summary")
+                    if ctx_summary:
+                        system_prompt += f"\n\nSESSION CONTEXT — OPERATIONS THIS SESSION:\n{ctx_summary}\n\nYou have full awareness of these operations. If Josh asks about any of them, answer directly from this context."
+            except Exception:
+                pass
             
             completion = client.chat.completions.create(
                 model=model,
@@ -296,6 +310,16 @@ async def chat_stream(request: ChatRequest):
                     system_prompt += f"\n\nRELEVANT KNOWLEDGE BASE CONTEXT:\n{knowledge_context[:2000]}"
             except Exception:
                 pass
+
+        # Inject session context if available
+        try:
+            ctx_res = httpx.get("http://127.0.0.1:8095/context/summary", timeout=2.0)
+            if ctx_res.status_code == 200:
+                ctx_summary = ctx_res.json().get("summary")
+                if ctx_summary:
+                    system_prompt += f"\n\nSESSION CONTEXT — OPERATIONS THIS SESSION:\n{ctx_summary}\n\nYou have full awareness of these operations. If Josh asks about any of them, answer directly from this context."
+        except Exception:
+            pass
 
         def generate():
             full_response = ""

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { pushContext } from "../SessionContext"
 import { Search, FileSearch, Hash, Clock, AlertTriangle, CheckCircle, ChevronRight, Network } from "lucide-react"
 import api from "../api"
 
@@ -77,6 +78,7 @@ function LogAnalysisPanel() {
         log_type: logType
       })
       setResult(res.data)
+      pushContext({ tab: 'Forensics', operation: 'Log Analysis', summary: `Log analysis complete - type: ${logType}. ${res.data.summary || ''}`.trim(), detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -274,6 +276,7 @@ function IOCPanel() {
     try {
       const res = await api.post(`${FORENSICS_API}/extract/iocs`, { text })
       setResult(res.data)
+      pushContext({ tab: 'Forensics', operation: 'IOC Extraction', summary: `IOC extraction complete. ${res.data.summary || `${res.data.iocs?.length ?? 0} IOCs found`}`.trim(), detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -377,6 +380,7 @@ function HashPanel() {
         expected_hash: expectedHash || null
       })
       setResult(res.data)
+      pushContext({ tab: 'Forensics', operation: 'File Hash Analysis', summary: `Hash analysis: ${res.data.file_path || filePath} - ${res.data.verdict || res.data.status || 'complete'}`, detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -469,6 +473,7 @@ function PcapPanel() {
         max_packets: 1000
       })
       setResult(res.data)
+      pushContext({ tab: 'Forensics', operation: 'PCAP Analysis', summary: `PCAP analysis complete: ${filePath}. ${res.data.summary || ''}`.trim(), detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }

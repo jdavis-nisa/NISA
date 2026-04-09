@@ -1,6 +1,7 @@
-import { useState } from "react"
-import { HashRouter, Routes, Route, NavLink } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
+import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom"
 import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2 } from "lucide-react"
+import { onNewContext } from "./SessionContext"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
 import Compliance from "./components/Compliance"
@@ -99,12 +100,13 @@ function Header() {
         <StatusDot label="METASPLOIT" port={8089} />
         <StatusDot label="SIGNAL API" port={8088} />
         <StatusDot label="PHOENIX" port={6006} />
+        <StatusDot label="SESSION CTX" port={8095} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
           color: "var(--text-dim)",
           letterSpacing: "0.1em",
-        }}>v0.3.0</div>
+        }}>v0.4.0</div>
       </div>
     </header>
   )
@@ -135,6 +137,31 @@ function StatusDot({ label, port }) {
 }
 
 function Sidebar() {
+  const [chatPulse, setChatPulse] = useState(false)
+  const [pendingContext, setPendingContext] = useState(null)
+  const location = useLocation()
+  const pulseTimer = useRef(null)
+
+  useEffect(() => {
+    const unsub = onNewContext((entry) => {
+      // Only pulse if not already on Chat tab
+      if (location.pathname !== "/") {
+        setChatPulse(true)
+        setPendingContext(entry)
+        // Keep pulsing until user visits Chat
+      }
+    })
+    return unsub
+  }, [location.pathname])
+
+  useEffect(() => {
+    // Clear pulse when user navigates to Chat
+    if (location.pathname === "/") {
+      setChatPulse(false)
+      setPendingContext(null)
+    }
+  }, [location.pathname])
+
   const navItems = [
     { to: "/", icon: MessageSquare, label: "CHAT", sublabel: "Nisaba" },
     { to: "/security", icon: Shield, label: "SECURITY", sublabel: "Scan & Analyze" },
@@ -160,38 +187,58 @@ function Sidebar() {
       flexDirection: "column",
       gap: "4px",
     }}>
-      {navItems.map(({ to, icon: Icon, label, sublabel }) => (
-        <NavLink key={to} to={to} end={to === "/"} style={({ isActive }) => ({
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "10px 16px",
-          textDecoration: "none",
-          borderLeft: isActive ? "2px solid var(--accent-gold)" : "2px solid transparent",
-          background: isActive ? "var(--accent-gold-glow)" : "transparent",
-          transition: "all 0.2s ease",
-        })}>
-          {({ isActive }) => (
-            <>
-              <Icon size={16} color={isActive ? "var(--accent-gold)" : "var(--text-dim)"} />
-              <div>
-                <div style={{
-                  fontFamily: "Rajdhani, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "12px",
-                  letterSpacing: "0.15em",
-                  color: isActive ? "var(--accent-gold)" : "var(--text-secondary)",
-                }}>{label}</div>
-                <div style={{
-                  fontFamily: "Outfit, sans-serif",
-                  fontSize: "10px",
-                  color: "var(--text-dim)",
-                }}>{sublabel}</div>
-              </div>
-            </>
-          )}
-        </NavLink>
-      ))}
+      {navItems.map(({ to, icon: Icon, label, sublabel }) => {
+        const isChatTab = to === "/"
+        const isPulsing = isChatTab && chatPulse
+        return (
+          <NavLink key={to} to={to} end={to === "/"} style={({ isActive }) => ({
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "10px 16px",
+            textDecoration: "none",
+            borderLeft: isActive ? "2px solid var(--accent-gold)" : isPulsing ? "2px solid var(--accent-cyan, #00d4ff)" : "2px solid transparent",
+            background: isActive ? "var(--accent-gold-glow)" : isPulsing ? "rgba(0,212,255,0.06)" : "transparent",
+            transition: "all 0.2s ease",
+            animation: isPulsing ? "chatPulse 2s ease-in-out infinite" : "none",
+          })}>
+            {({ isActive }) => (
+              <>
+                <div style={{ position: "relative" }}>
+                  <Icon size={16} color={isActive ? "var(--accent-gold)" : isPulsing ? "var(--accent-cyan, #00d4ff)" : "var(--text-dim)"} />
+                  {isPulsing && (
+                    <div style={{
+                      position: "absolute",
+                      top: "-3px",
+                      right: "-3px",
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "var(--accent-cyan, #00d4ff)",
+                      boxShadow: "0 0 6px var(--accent-cyan, #00d4ff)",
+                      animation: "chatPulse 2s ease-in-out infinite",
+                    }} />
+                  )}
+                </div>
+                <div>
+                  <div style={{
+                    fontFamily: "Rajdhani, sans-serif",
+                    fontWeight: 600,
+                    fontSize: "12px",
+                    letterSpacing: "0.15em",
+                    color: isActive ? "var(--accent-gold)" : isPulsing ? "var(--accent-cyan, #00d4ff)" : "var(--text-secondary)",
+                  }}>{label}</div>
+                  <div style={{
+                    fontFamily: "Outfit, sans-serif",
+                    fontSize: "10px",
+                    color: isPulsing ? "var(--accent-cyan, #00d4ff)" : "var(--text-dim)",
+                  }}>{isPulsing && pendingContext ? `New: ${pendingContext.tab}` : sublabel}</div>
+                </div>
+              </>
+            )}
+          </NavLink>
+        )
+      })}
     </nav>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { pushContext } from "../SessionContext"
 import { useLocation } from "react-router-dom"
 import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
 import api from "../api"
@@ -141,6 +142,7 @@ export default function Remediation() {
       })
       setResult(res.data)
       setStep("results")
+      pushContext({ tab: 'Remediation', operation: 'Patch Generation', summary: `Patch generated for ${vulnForm.language || 'unknown'} - ${res.data.test_status || 'complete'}. ${res.data.summary || ''}`.trim(), detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
