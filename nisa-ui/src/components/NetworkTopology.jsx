@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import * as d3 from "d3"
 import api from "../api"
 
@@ -41,6 +42,18 @@ export default function NetworkTopology({ scanData, standalone = false }) {
   const [error, setError] = useState("")
   const [graphData, setGraphData] = useState(null)
   const [stats, setStats] = useState(null)
+  const navigate = useNavigate()
+
+  const sendToRemediation = (node, port) => {
+    const vuln = `Exposed ${port.service} service on port ${port.port} detected during Nmap scan of host ${node.ip}. Risk level: ${node.risk?.toUpperCase() || 'UNKNOWN'}. Assess for unauthorized access, default credentials, and known CVEs for ${port.service}${port.version ? ' version ' + port.version : ''}. Recommend service hardening, firewall rules, and access controls.`
+    navigate('/remediation', { state: {
+      prefill: {
+        vulnerability: vuln,
+        component: `${node.ip}:${port.port} (${port.service})`,
+        language: 'bash'
+      }
+    }})
+  }
 
   const buildGraph = (data) => {
     const nodes = []
@@ -68,11 +81,16 @@ export default function NetworkTopology({ scanData, standalone = false }) {
       if (line.includes("Nmap scan report for")) {
         const match = line.match(/for (.+)/)
         if (match) {
+          const raw = match[1].trim()
+          // Handle both "hostname (ip)" and plain "ip" formats
+          const ipMatch = raw.match(/\((\d+\.\d+\.\d+\.\d+)\)/)
+          const ip = ipMatch ? ipMatch[1] : raw
+          const label = raw.split(" ")[0]
           currentHost = {
-            id: match[1].trim(),
-            label: match[1].trim().split(" ")[0],
+            id: ip,
+            label: label,
             type: "host",
-            ip: match[1].trim(),
+            ip: ip,
             ports: [],
             openPorts: 0,
             vulnerabilities: 0,
@@ -429,13 +447,27 @@ export default function NetworkTopology({ scanData, standalone = false }) {
                 </div>
                 <div style={{ maxHeight: "150px", overflowY: "auto" }}>
                   {selectedNode.ports.map((p, i) => (
-                    <div key={i} style={{ display: "flex", gap: "8px", padding: "3px 0",
-                      borderBottom: `1px solid ${BORDER}`,
-                      fontFamily: "JetBrains Mono, monospace", fontSize: "10px" }}>
-                      <span style={{ color: GOLD, minWidth: "60px" }}>{p.port}</span>
-                      <span style={{ color: "#44ffaa" }}>{p.service}</span>
+                    <div key={i} style={{ padding: "4px 0",
+                      borderBottom: `1px solid ${BORDER}` }}>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center",
+                        fontFamily: "JetBrains Mono, monospace", fontSize: "10px" }}>
+                        <span style={{ color: GOLD, minWidth: "60px" }}>{p.port}</span>
+                        <span style={{ color: "#44ffaa", flex: 1 }}>{p.service}</span>
+                        <button
+                          onClick={() => sendToRemediation(selectedNode, p)}
+                          style={{ padding: "2px 6px", background: "transparent",
+                            border: "1px solid #ff6600", borderRadius: "3px",
+                            cursor: "pointer", fontFamily: "Rajdhani, sans-serif",
+                            fontSize: "9px", fontWeight: 700, color: "#ff6600",
+                            letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                          REMEDIATE
+                        </button>
+                      </div>
                       {p.version && (
-                        <span style={{ color: DIM, fontSize: "9px" }}>{p.version}</span>
+                        <div style={{ color: DIM, fontSize: "9px",
+                          fontFamily: "JetBrains Mono, monospace", marginTop: "2px" }}>
+                          {p.version}
+                        </div>
                       )}
                     </div>
                   ))}

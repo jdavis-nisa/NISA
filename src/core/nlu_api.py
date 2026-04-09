@@ -53,7 +53,7 @@ async def api_key_middleware(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -123,7 +123,7 @@ Never provide definitive medical diagnoses, legal rulings, or financial guarante
 NISA CODING STANDARDS — apply these automatically when writing code FOR NISA:
 When writing Python APIs for NISA, always follow these patterns:
 - Bind uvicorn to host="127.0.0.1" never "0.0.0.0"
-- CORS: allow_origins=["http://localhost:5173"] only
+- CORS: allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"] only
 - Always include API key middleware: check X-NISA-API-Key header against NISA_API_KEY env var
 - Always call load_dotenv(os.path.expanduser("~/NISA/.env")) at startup
 - Always use python3.11 explicitly in scripts

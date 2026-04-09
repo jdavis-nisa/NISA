@@ -160,7 +160,7 @@ def nmap_scan(req: ScanRequest, token: str):
         raise HTTPException(status_code=401,
             detail="Invalid or expired JIT token")
 
-    safe_targets = ["localhost", "127.0.0.1", "192.168.", "10.", "172."]
+    safe_targets = ["localhost", "127.0.0.1", "192.168.", "10.", "172.", "0.0.0.0"]
     if not any(req.target.startswith(t) for t in safe_targets):
         raise HTTPException(status_code=403,
             detail="Target must be localhost or private network")

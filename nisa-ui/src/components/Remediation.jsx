@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
 import api from "../api"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
@@ -55,6 +56,7 @@ const btnStyle = (color = "var(--accent-gold)") => ({
 
 export default function Remediation() {
   const [step, setStep] = useState("authorize")
+  const location = useLocation()
   const [session, setSession] = useState(null)
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -87,6 +89,27 @@ export default function Remediation() {
     authorization_date: new Date().toISOString().split("T")[0],
     engagement_type: "vulnerability_assessment"
   })
+
+  useEffect(() => {
+    const prefill = location?.state?.prefill
+    if (prefill) {
+      setVulnForm(prev => ({
+        ...prev,
+        vulnerability: prefill.vulnerability || prev.vulnerability,
+        affected_component: prefill.component || prev.affected_component,
+        language: prefill.language || prev.language
+      }))
+      // Pre-populate the auth form target from topology scan
+      if (prefill.component) {
+        const ip = prefill.component.split(':')[0]
+        setAuthForm(prev => ({
+          ...prev,
+          target: ip,
+          scope: prefill.vulnerability || prev.scope
+        }))
+      }
+    }
+  }, [])
 
   const [vulnForm, setVulnForm] = useState({
     vulnerability: "",
