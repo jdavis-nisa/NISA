@@ -295,6 +295,254 @@
     "cc2ecc9e": {
       "name": "ArXiv_Metaphor_Language",
       "ts": "2026-04-08T07:31:33.146987"
+    },
+    "9aa61b76": {
+      "name": "Kali_Tools_Docs",
+      "ts": "2026-04-09T02:02:43.038449"
+    },
+    "59b9d6ff": {
+      "name": "Metasploit_Unleashed",
+      "ts": "2026-04-09T02:02:45.122691"
+    },
+    "09955b30": {
+      "name": "Metasploit_Docs",
+      "ts": "2026-04-09T02:02:47.242251"
+    },
+    "8b1b0240": {
+      "name": "Nmap_Reference",
+      "ts": "2026-04-09T02:02:49.331892"
+    },
+    "858e86eb": {
+      "name": "Wireshark_Docs",
+      "ts": "2026-04-09T02:02:51.443567"
+    },
+    "55ff04fb": {
+      "name": "Burp_Suite_Docs",
+      "ts": "2026-04-09T02:02:54.030362"
+    },
+    "a8a10be4": {
+      "name": "PortSwigger_Web_Security",
+      "ts": "2026-04-09T02:02:56.538949"
+    },
+    "3c5b5654": {
+      "name": "PortSwigger_SQLi",
+      "ts": "2026-04-09T02:02:59.032605"
+    },
+    "9d97b520": {
+      "name": "PortSwigger_XSS",
+      "ts": "2026-04-09T02:03:01.520428"
+    },
+    "4ebaf4bd": {
+      "name": "PortSwigger_CSRF",
+      "ts": "2026-04-09T02:03:04.008641"
+    },
+    "ad27e4d5": {
+      "name": "PortSwigger_SSRF",
+      "ts": "2026-04-09T02:03:06.521850"
+    },
+    "2b495121": {
+      "name": "Linux_Man_Pages_Bash",
+      "ts": "2026-04-09T02:03:09.926397"
+    },
+    "9f70a763": {
+      "name": "GTFOBins",
+      "ts": "2026-04-09T02:03:14.101737"
+    },
+    "f8e3515b": {
+      "name": "PWNDBG_Docs",
+      "ts": "2026-04-09T02:03:20.469288"
+    },
+    "3ec9d7ef": {
+      "name": "SQLMap_Docs",
+      "ts": "2026-04-09T02:03:22.547174"
+    },
+    "bfe95847": {
+      "name": "Aircrack_Docs",
+      "ts": "2026-04-09T02:03:24.632735"
+    },
+    "fa5622a3": {
+      "name": "John_The_Ripper_Docs",
+      "ts": "2026-04-09T02:03:26.726753"
+    },
+    "0f80316d": {
+      "name": "Hashcat_Docs",
+      "ts": "2026-04-09T02:03:28.815617"
+    },
+    "6a6ef718": {
+      "name": "Nikto_Docs",
+      "ts": "2026-04-09T02:03:33.077666"
+    },
+    "9d83433e": {
+      "name": "Gobuster_Docs",
+      "ts": "2026-04-09T02:03:35.196840"
+    },
+    "b410f62a": {
+      "name": "Ffuf_Docs",
+      "ts": "2026-04-09T02:03:37.282156"
+    },
+    "7836985d": {
+      "name": "Tmux_Cheatsheet",
+      "ts": "2026-04-09T02:03:39.360884"
+    },
+    "e57c7cb8": {
+      "name": "Vim_Reference",
+      "ts": "2026-04-09T02:03:41.448785"
+    },
+    "57b57b20": {
+      "name": "Python_Security_Libs",
+      "ts": "2026-04-09T02:03:43.542184"
+    },
+    "ed6902b9": {
+      "name": "Impacket_Docs",
+      "ts": "2026-04-09T02:03:47.744678"
+    },
+    "4cac4c4f": {
+      "name": "ArXiv_Pentesting",
+      "ts": "2026-04-09T02:03:49.877699"
+    },
+    "af7e6b2e": {
+      "name": "ArXiv_Exploit_Dev",
+      "ts": "2026-04-09T02:03:51.987734"
+    },
+    "42478e44": {
+      "name": "ArXiv_Wireless_Security",
+      "ts": "2026-04-09T02:03:54.120677"
+    },
+    "c37b20e2": {
+      "name": "OWASP_WSTG_Full",
+      "ts": "2026-04-09T02:03:56.223649"
+    },
+    "fd3c215d": {
+      "name": "PayloadsAllTheThings",
+      "ts": "2026-04-09T02:03:58.321076"
+    },
+    "421f2d78": {
+      "name": "SecLists_README",
+      "ts": "2026-04-09T02:04:00.421936"
+    },
+    "fb6ab8eb": {
+      "name": "Apple_M_Series_Specs",
+      "ts": "2026-04-09T02:04:02.608898"
+    },
+    "5f8562d6": {
+      "name": "CVE_iPhone_Security",
+      "ts": "2026-04-09T02:04:04.745439"
+    },
+    "2e04ec36": {
+      "name": "CVE_Android_Security",
+      "ts": "2026-04-09T02:04:06.875092"
+    },
+    "47e2342a": {
+      "name": "ArXiv_IoT_Security",
+      "ts": "2026-04-09T02:04:09.001974"
+    },
+    "7a2d77f2": {
+      "name": "ArXiv_Router_Security",
+      "ts": "2026-04-09T02:04:11.131198"
+    },
+    "5227a5a9": {
+      "name": "ArXiv_Firmware_Security",
+      "ts": "2026-04-09T02:04:13.259493"
+    },
+    "ab503116": {
+      "name": "ArXiv_Hardware_Security",
+      "ts": "2026-04-09T02:04:15.385034"
+    },
+    "484d4914": {
+      "name": "ArXiv_Spectre_Meltdown",
+      "ts": "2026-04-09T02:04:17.555299"
+    },
+    "ded1dfd8": {
+      "name": "ArXiv_BIOS_UEFI",
+      "ts": "2026-04-09T02:04:19.685169"
+    },
+    "4311c53d": {
+      "name": "ArXiv_Cloud_Security",
+      "ts": "2026-04-09T02:04:21.822466"
+    },
+    "8d66bfb7": {
+      "name": "ArXiv_Container_Security",
+      "ts": "2026-04-09T02:04:23.939226"
+    },
+    "b6afc2fe": {
+      "name": "ArXiv_5G_Security",
+      "ts": "2026-04-09T02:04:26.077454"
+    },
+    "ba1b6179": {
+      "name": "ArXiv_Bluetooth_Security",
+      "ts": "2026-04-09T02:04:28.219872"
+    },
+    "fab1b812": {
+      "name": "ArXiv_USB_Security",
+      "ts": "2026-04-09T02:04:30.345171"
+    },
+    "ad9af933": {
+      "name": "ArXiv_Laptop_Security",
+      "ts": "2026-04-09T02:04:32.469889"
+    },
+    "6a5e712f": {
+      "name": "ArXiv_Windows_Security",
+      "ts": "2026-04-09T02:04:34.609322"
+    },
+    "357fe33a": {
+      "name": "ArXiv_Linux_Security",
+      "ts": "2026-04-09T02:04:36.739884"
+    },
+    "db6027dd": {
+      "name": "ArXiv_macOS_Security",
+      "ts": "2026-04-09T02:04:38.853362"
+    },
+    "21e95882": {
+      "name": "ArXiv_Network_Protocol",
+      "ts": "2026-04-09T02:04:40.985072"
+    },
+    "29544f58": {
+      "name": "ArXiv_SCADA_ICS",
+      "ts": "2026-04-09T02:04:43.114843"
+    },
+    "c682894b": {
+      "name": "ArXiv_GPU_Security",
+      "ts": "2026-04-09T02:04:45.267396"
+    },
+    "93d2c44e": {
+      "name": "ArXiv_Memory_Security",
+      "ts": "2026-04-09T02:04:47.392610"
+    },
+    "f4a783b5": {
+      "name": "ArXiv_AI_Chip_Security",
+      "ts": "2026-04-09T02:04:51.635229"
+    },
+    "4eff10e7": {
+      "name": "ArXiv_iOS_Security",
+      "ts": "2026-04-09T02:15:23.384386"
+    },
+    "04f06160": {
+      "name": "ArXiv_Android_Security",
+      "ts": "2026-04-09T02:15:26.181743"
+    },
+    "96e8e578": {
+      "name": "ArXiv_Windows_OS_Security",
+      "ts": "2026-04-09T02:15:31.824376"
+    },
+    "97d45b50": {
+      "name": "ArXiv_macOS_Ventura_Sonoma",
+      "ts": "2026-04-09T02:15:34.596361"
+    },
+    "b16251ba": {
+      "name": "ArXiv_ChromeOS_Security",
+      "ts": "2026-04-09T02:15:37.482611"
+    },
+    "d92bd3e0": {
+      "name": "ArXiv_Hypervisor_Security",
+      "ts": "2026-04-09T02:15:41.069012"
+    },
+    "04aaae8b": {
+      "name": "ArXiv_Smartphone_Forensics",
+      "ts": "2026-04-09T02:15:43.691137"
+    },
+    "eebdd332": {
+      "name": "ArXiv_OS_Kernel_Security",
+      "ts": "2026-04-09T02:15:49.038026"
     }
   }
 }

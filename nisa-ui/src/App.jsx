@@ -11,6 +11,7 @@ import Memory from "./components/Memory"
 import RedTeam from "./components/RedTeam"
 import Signal from "./components/Signal"
 import Metasploit from "./components/Metasploit"
+import NetworkTopology from './components/NetworkTopology'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/signal" element={<Signal />} />
               <Route path="/metasploit" element={<Metasploit />} />
+              <Route path="/topology" element={<NetworkTopology standalone={true} />} />
             </Routes>
           </main>
         </div>
@@ -140,6 +142,7 @@ function Sidebar() {
     { to: "/compliance", icon: FileText, label: "COMPLIANCE", sublabel: "Audit Reports" },
     { to: "/signal", icon: Activity, label: "SIGNAL", sublabel: "Waveform & Radar" },
     { to: "/metasploit", icon: Shield, label: "METASPLOIT", sublabel: "Exploit Framework" },
+    { to: "/topology", icon: Shield, label: "TOPOLOGY", sublabel: "Network Graph" },
   ]
   return (
     <nav style={{
