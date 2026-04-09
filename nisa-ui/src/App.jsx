@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2 } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play } from "lucide-react"
 import { onNewContext } from "./SessionContext"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
@@ -15,6 +15,7 @@ import Metasploit from "./components/Metasploit"
 import NetworkTopology from './components/NetworkTopology'
 import ThreatIntel from './components/ThreatIntel'
 import AdversarialSim from './components/AdversarialSim'
+import Playbook from './components/Playbook'
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
               <Route path="/topology" element={<NetworkTopology standalone={true} />} />
               <Route path="/threatintel" element={<ThreatIntel />} />
               <Route path="/adversarial" element={<AdversarialSim />} />
+              <Route path="/playbook" element={<Playbook />} />
             </Routes>
           </main>
         </div>
@@ -101,6 +103,7 @@ function Header() {
         <StatusDot label="SIGNAL API" port={8088} />
         <StatusDot label="PHOENIX" port={6006} />
         <StatusDot label="SESSION CTX" port={8095} />
+        <StatusDot label="PLAYBOOK" port={8096} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
@@ -176,6 +179,7 @@ function Sidebar() {
     { to: "/topology", icon: Shield, label: "TOPOLOGY", sublabel: "Network Graph" },
     { to: "/threatintel", icon: Shield, label: "THREAT INTEL", sublabel: "CVE & ATT&CK" },
     { to: "/adversarial", icon: Shield, label: "ADVERSARIAL", sublabel: "Kill Chain Sim" },
+    { to: "/playbook", icon: Play, label: "PLAYBOOK", sublabel: "Automated Workflows" },
   ]
   return (
     <nav style={{

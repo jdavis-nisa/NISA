@@ -32,6 +32,7 @@ lsof -ti:8082 | xargs kill -9 2>/dev/null || true
 lsof -ti:8083 | xargs kill -9 2>/dev/null || true
 lsof -ti:6006 | xargs kill -9 2>/dev/null || true
 lsof -ti:8095 | xargs kill -9 2>/dev/null || true
+lsof -ti:8096 | xargs kill -9 2>/dev/null || true
 sleep 1
 echo "       Ports 8081, 8082, 8083, 6006, 8095 cleared"
 
@@ -168,7 +169,18 @@ else
     echo "       Session Context API failed to start - check logs/session_context_api.log"
 fi
 
-# ── Step 14: Threat Intel API ────────────────────────────────────
+# ── Step 14: Playbook API ───────────────────────────────────────
+echo "[ 14/16 ] Starting Playbook API (port 8096)..."
+python3.11 "$NISA_DIR/src/core/playbook_api.py" > "$NISA_DIR/logs/playbook_api.log" 2>&1 &
+PBA_PID=$!
+sleep 2
+if curl -s http://127.0.0.1:8096/health > /dev/null 2>&1; then
+    echo "       Playbook API online - PID $PBA_PID"
+else
+    echo "       Playbook API failed to start - check logs/playbook_api.log"
+fi
+
+# ── Step 15: Threat Intel API ────────────────────────────────────
 # (started separately if present)
 
 # ── Step 15: Adversarial API ─────────────────────────────────────
@@ -201,6 +213,7 @@ echo "║  Metasploit   http://localhost:8089      ║"
 echo "║  Terminal     ws://localhost:8091       ║"
 echo "║  Signal Proc  http://localhost:8088      ║"
 echo "║  Session Ctx  http://localhost:8095      ║"
+echo "║  Playbook API http://localhost:8096      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"
