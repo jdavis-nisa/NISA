@@ -140,6 +140,11 @@ else
 fi
 
 # ── Step 12: Signal Processing API ──────────────────────────────
+echo "[ 12/14 ] Starting Threat Intel API (port 8093)..."
+lsof -ti:8093 | xargs kill -9 2>/dev/null || true
+python3.11 "$NISA_DIR/src/security/threatintel_api.py" > "$NISA_DIR/logs/threatintel_api.log" 2>&1 &
+sleep 2
+lsof -i:8093 > /dev/null 2>&1 && echo "       Threat Intel API online" || echo "       Threat Intel API failed"
 echo "[ 13/14 ] Starting Signal Processing API (port 8088)..."
 lsof -ti:8088 | xargs kill -9 2>/dev/null || true
 python3.11 "$NISA_DIR/src/core/signal_api.py" > "$NISA_DIR/logs/signal_api.log" 2>&1 &

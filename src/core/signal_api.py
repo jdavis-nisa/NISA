@@ -43,7 +43,7 @@ async def api_key_middleware(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -300,14 +300,25 @@ def run_octave(req: OctaveRequest):
             tmp = f.name
         result = subprocess.run(
             [octave_bin, "--no-gui", "--quiet", tmp],
-            capture_output=True, text=True, timeout=30
+            capture_output=True, text=True, timeout=60
         )
         os.unlink(tmp)
+        
+        # Check for saved image output
+        image_b64 = None
+        image_path = "/tmp/nisa_rdmap.png"
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as img_f:
+                image_b64 = base64.b64encode(img_f.read()).decode()
+            os.unlink(image_path)
+        
         return {
+            "output": result.stdout,
             "stdout": result.stdout,
             "stderr": result.stderr,
             "returncode": result.returncode,
             "description": req.description,
+            "image": image_b64,
         }
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Octave execution timed out")
@@ -328,4 +339,4 @@ def get_waveform_types():
 
 if __name__ == "__main__":
     print("Starting NISA Signal Processing API on port 8088...")
-    uvicorn.run(app, host="0.0.0.0", port=8088, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=8088, log_level="warning")

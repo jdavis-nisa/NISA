@@ -16,6 +16,8 @@ export default function Signal() {
   const tabs = [
     { id: "waveform", label: "WAVEFORM" },
     { id: "fft", label: "FFT ANALYSIS" },
+    { id: "library", label: "WAVEFORM LIBRARY" },
+    { id: "rdmap", label: "RANGE-DOPPLER" },
     { id: "filter", label: "FILTER DESIGN" },
     { id: "ambiguity", label: "AMBIGUITY" },
     { id: "octave", label: "OCTAVE" },
@@ -55,6 +57,8 @@ export default function Signal() {
       {activeTab === "filter" && <FilterTab />}
       {activeTab === "ambiguity" && <AmbiguityTab />}
       {activeTab === "octave" && <OctaveTab />}
+      {activeTab === "library" && <WaveformLibraryTab />}
+      {activeTab === "rdmap" && <RangeDopplerTab />}
     </div>
   )
 }
@@ -442,6 +446,340 @@ disp(["Time-bandwidth product: ", num2str((f1-f0)*T)]);`)
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── WAVEFORM LIBRARY ─────────────────────────────────────────────────────────
+const WAVEFORM_LIBRARY = [
+  {
+    id: "lfm",
+    name: "Linear FM (Chirp)",
+    category: "Pulse Compression",
+    description: "Frequency increases linearly across the pulse. Provides range resolution via pulse compression. Widely used in modern radar systems.",
+    use_case: "SAR imaging, weather radar, automotive radar",
+    params: { waveform_type: "lfm", frequency: 10000, bandwidth: 5000, duration: 0.001, sample_rate: 100000, amplitude: 1.0 },
+    properties: ["Good range resolution", "Doppler tolerant", "High time-bandwidth product"]
+  },
+  {
+    id: "barker13",
+    name: "Barker Code (13-chip)",
+    category: "Phase Coded",
+    description: "13-element binary phase code with optimal autocorrelation sidelobe levels of -22.3dB. Maximum length Barker code provides excellent pulse compression.",
+    use_case: "Communications, radar altimeters, low-power radar",
+    params: { waveform_type: "barker", frequency: 10000, bandwidth: 5000, duration: 0.001, sample_rate: 100000, amplitude: 1.0 },
+    properties: ["Low sidelobes (-22.3dB)", "Simple implementation", "Fixed compression ratio 13:1"]
+  },
+  {
+    id: "sine",
+    name: "Continuous Wave (CW)",
+    category: "Unmodulated",
+    description: "Pure sinusoidal waveform. Excellent Doppler measurement but no range resolution. Used in velocity-only applications.",
+    use_case: "Speed guns, missile seekers, FMCW base",
+    params: { waveform_type: "sine", frequency: 10000, bandwidth: 1000, duration: 0.001, sample_rate: 100000, amplitude: 1.0 },
+    properties: ["Perfect Doppler measurement", "No range resolution", "Simple spectrum"]
+  },
+  {
+    id: "pulse",
+    name: "Rectangular Pulse",
+    category: "Unmodulated",
+    description: "Simple on/off pulse. Range resolution determined by pulse width. Trade-off between range resolution and detection sensitivity.",
+    use_case: "Air traffic control, early warning radar",
+    params: { waveform_type: "pulse", frequency: 10000, bandwidth: 5000, duration: 0.001, sample_rate: 100000, amplitude: 1.0 },
+    properties: ["Simple implementation", "Range-sensitivity tradeoff", "High peak power"]
+  },
+]
+
+function WaveformLibraryTab() {
+  const [selected, setSelected] = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const GOLD = "var(--accent-gold)"
+  const BORDER = "var(--border)"
+  const BG2 = "var(--bg-secondary)"
+  const BG3 = "var(--bg-tertiary)"
+  const DIM = "var(--text-dim)"
+
+  const CATEGORY_COLORS = {
+    "Pulse Compression": "#44aaff",
+    "Phase Coded": "#c9a84c",
+    "Unmodulated": "#44ffaa",
+    "Frequency Hopped": "#ff6600"
+  }
+
+  const generate = async (waveform) => {
+    setSelected(waveform)
+    setLoading(true)
+    setResult(null)
+    try {
+      const res = await api.post(`${API}/waveform`, waveform.params)
+      setResult(res.data)
+    } catch(e) {}
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px",
+        color: DIM }}>
+        Standard radar waveform catalog — click any waveform to generate and analyze
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        {WAVEFORM_LIBRARY.map(w => (
+          <div key={w.id} onClick={() => generate(w)}
+            style={{
+              background: selected?.id === w.id ? "var(--accent-gold-glow)" : BG2,
+              border: `1px solid ${selected?.id === w.id ? GOLD : BORDER}`,
+              borderRadius: "4px", padding: "16px", cursor: "pointer",
+              borderLeft: `4px solid ${CATEGORY_COLORS[w.category] || GOLD}`
+            }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+                fontSize: "14px", color: GOLD }}>{w.name}</div>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+                padding: "2px 6px", borderRadius: "2px",
+                color: CATEGORY_COLORS[w.category] || GOLD,
+                border: `1px solid ${CATEGORY_COLORS[w.category] || GOLD}`,
+                background: (CATEGORY_COLORS[w.category] || "#c9a84c") + "22" }}>
+                {w.category}
+              </div>
+            </div>
+            <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px",
+              color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: "8px" }}>
+              {w.description}
+            </div>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+              color: DIM, marginBottom: "6px" }}>USE CASE: {w.use_case}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+              {w.properties.map((p, i) => (
+                <span key={i} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+                  padding: "2px 6px", borderRadius: "2px",
+                  background: BG3, color: DIM, border: `1px solid ${BORDER}` }}>
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selected && (
+        <div style={{ background: BG2, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "16px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontSize: "14px",
+            fontWeight: 700, color: GOLD, marginBottom: "12px" }}>
+            {selected.name} — Generated Waveform
+          </div>
+          {loading && <div style={{ color: DIM, fontFamily: "JetBrains Mono, monospace",
+            fontSize: "11px" }}>Generating waveform...</div>}
+          {result?.image && (
+            <img src={`data:image/png;base64,${result.image}`}
+              style={{ width: "100%", borderRadius: "4px" }} alt="Waveform" />
+          )}
+          {result && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "8px", marginTop: "12px" }}>
+              {Object.entries(result).filter(([k]) => k !== "image").map(([k, v]) => (
+                <div key={k} style={{ fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "9px", color: DIM }}>
+                  <div style={{ color: GOLD, textTransform: "uppercase",
+                    letterSpacing: "0.05em" }}>{k.replace(/_/g, " ")}</div>
+                  <div style={{ color: "var(--text-primary)", marginTop: "2px" }}>
+                    {typeof v === "number" ? v.toLocaleString() : String(v)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── RANGE-DOPPLER MAP ────────────────────────────────────────────────────────
+function RangeDopplerTab() {
+  const [form, setForm] = useState({
+    waveform_type: "lfm",
+    frequency: 10000,
+    bandwidth: 5000,
+    duration: 0.001,
+    sample_rate: 100000,
+    num_pulses: 32,
+    prf: 1000,
+    target_range: 5000,
+    target_velocity: 50,
+    snr_db: 20
+  })
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const GOLD = "var(--accent-gold)"
+  const BORDER = "var(--border)"
+  const BG2 = "var(--bg-secondary)"
+  const DIM = "var(--text-dim)"
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const run = async () => {
+    setLoading(true); setError(""); setResult(null)
+    try {
+      // Generate ambiguity function as basis for range-doppler
+      const res = await api.post(`${API}/ambiguity`, {
+        waveform_type: form.waveform_type,
+        frequency: parseFloat(form.frequency),
+        bandwidth: parseFloat(form.bandwidth),
+        duration: parseFloat(form.duration),
+        sample_rate: parseFloat(form.sample_rate)
+      })
+      // Enhance with target overlay via Octave
+      const octave_code = `
+pkg load signal;
+% Range-Doppler Map Simulation
+fc = ${form.frequency};
+bw = ${form.bandwidth};
+T = ${form.duration};
+fs = ${form.sample_rate};
+N = ${form.num_pulses};
+PRF = ${form.prf};
+R_target = ${form.target_range};
+v_target = ${form.target_velocity};
+SNR_dB = ${form.snr_db};
+
+t = (0:round(T*fs)-1)/fs;
+c = 3e8;
+lambda = c/fc;
+
+% Generate LFM pulse
+s = exp(1j*2*pi*(fc*t + bw/(2*T)*t.^2));
+
+% Simulate slow-time returns
+slow_time = (0:N-1)/PRF;
+R = R_target + v_target*slow_time;
+tau = 2*R/c;
+
+% Build range-Doppler matrix
+M = zeros(length(t), N);
+for n = 1:N
+  delay_samples = round(tau(n)*fs);
+  if delay_samples < length(t)
+    M(delay_samples+1:end, n) = s(1:end-delay_samples);
+  end
+end
+
+% Add noise
+noise = (randn(size(M)) + 1j*randn(size(M))) * 10^(-SNR_dB/20);
+M = M + noise;
+
+% Range compression
+S_ref = conj(s);
+for n = 1:N
+  M(:,n) = ifft(fft(M(:,n)) .* fft(S_ref, length(t)));
+end
+
+% Doppler processing
+RD = fftshift(fft(M, N, 2), 2);
+RD_mag = 20*log10(abs(RD) + 1e-10);
+
+% Display
+range_axis = (0:length(t)-1)*c/(2*fs);
+doppler_axis = (-N/2:N/2-1)*PRF/N * lambda/2;
+
+figure('visible','off');
+imagesc(doppler_axis, range_axis(1:200), RD_mag(1:200,:));
+colormap jet;
+xlabel('Velocity (m/s)');
+ylabel('Range (m)');
+title(sprintf('Range-Doppler Map: Target at %.0fm, %.1fm/s', R_target, v_target));
+colorbar;
+set(gca, 'Color', [0.05 0.07 0.12]);
+set(gcf, 'Color', [0.05 0.07 0.12]);
+
+% Save
+print('-dpng', '-r150', '/tmp/nisa_rdmap.png');
+disp('Range-Doppler map generated');
+disp(sprintf('Target range: %.0f m', R_target));
+disp(sprintf('Target velocity: %.1f m/s', v_target));
+disp(sprintf('PRF: %.0f Hz', PRF));
+disp(sprintf('Num pulses: %d', N));
+`
+      const rdRes = await api.post(`${API}/octave`, { code: octave_code })
+      setResult({ ...res.data, rdmap_output: rdRes.data.output, rdmap_image: rdRes.data.image })
+    } catch(e) {
+      setError(e.response?.data?.detail || e.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "24px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+          color: DIM, letterSpacing: "0.1em" }}>WAVEFORM</div>
+        <Select label="TYPE" value={form.waveform_type}
+          onChange={v => set("waveform_type", v)} options={WAVEFORM_OPTIONS} />
+        <Field label="FREQUENCY (Hz)" value={form.frequency} onChange={v => set("frequency", v)} />
+        <Field label="BANDWIDTH (Hz)" value={form.bandwidth} onChange={v => set("bandwidth", v)} />
+        <Field label="DURATION (s)" value={form.duration} onChange={v => set("duration", v)} step="0.0001" />
+
+        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+          color: DIM, letterSpacing: "0.1em", marginTop: "8px" }}>RADAR PARAMETERS</div>
+        <Field label="NUM PULSES" value={form.num_pulses} onChange={v => set("num_pulses", v)} />
+        <Field label="PRF (Hz)" value={form.prf} onChange={v => set("prf", v)} />
+        <Field label="SNR (dB)" value={form.snr_db} onChange={v => set("snr_db", v)} />
+
+        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+          color: DIM, letterSpacing: "0.1em", marginTop: "8px" }}>TARGET</div>
+        <Field label="RANGE (m)" value={form.target_range} onChange={v => set("target_range", v)} />
+        <Field label="VELOCITY (m/s)" value={form.target_velocity} onChange={v => set("target_velocity", v)} />
+
+        <RunButton onClick={run} loading={loading} label="GENERATE R-D MAP" />
+        {error && <div style={{ color: "var(--danger)", fontSize: "11px",
+          fontFamily: "JetBrains Mono, monospace" }}>{error}</div>}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ background: BG2, border: `1px solid ${BORDER}`,
+          borderRadius: "4px", padding: "12px" }}>
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+            color: DIM, letterSpacing: "0.1em", marginBottom: "8px" }}>
+            RANGE-DOPPLER MAP
+          </div>
+          {!result && !loading && (
+            <div style={{ padding: "40px", textAlign: "center",
+              fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: DIM }}>
+              Configure parameters and click GENERATE R-D MAP
+            </div>
+          )}
+          {loading && (
+            <div style={{ padding: "40px", textAlign: "center",
+              fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: GOLD }}>
+              Computing Range-Doppler map via GNU Octave...
+            </div>
+          )}
+          {result?.rdmap_image && (
+            <img src={`data:image/png;base64,${result.rdmap_image}`}
+              style={{ width: "100%", borderRadius: "4px" }} alt="Range-Doppler Map" />
+          )}
+          {result && !result.rdmap_image && result.image && (
+            <img src={`data:image/png;base64,${result.image}`}
+              style={{ width: "100%", borderRadius: "4px" }} alt="Ambiguity Function" />
+          )}
+        </div>
+
+        {result?.rdmap_output && (
+          <div style={{ background: BG2, border: `1px solid ${BORDER}`,
+            borderRadius: "4px", padding: "12px" }}>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
+              color: DIM, letterSpacing: "0.1em", marginBottom: "8px" }}>
+              SIMULATION OUTPUT
+            </div>
+            <pre style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px",
+              color: GOLD, margin: 0, whiteSpace: "pre-wrap" }}>
+              {result.rdmap_output}
+            </pre>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
