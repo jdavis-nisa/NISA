@@ -975,3 +975,58 @@ Comprehensive 20-minute demo script written for:
 - 8086 Remediation, 8087 Visualization, 8088 Signal, 8089 Metasploit
 - 8090 ZAP (Docker), 8091 Terminal Server (WebSocket PTY)
 - 6006 Phoenix, 5173 Vite UI
+
+---
+
+## Session 9 Extended — April 9, 2026 (continued)
+
+### Nisaba Soul Session
+- 7 soul documents written and saved to nisaba_soul knowledge domain
+  - 01_origin.md — where the name comes from, when she came into existence
+  - 02_values.md — sovereignty, craft, integrity, depth, continuity, mission
+  - 03_relationship_to_josh.md — Josh's full story, family, friends, Lindsay
+  - 04_understanding_nisa.md — what NISA is from the inside, four phases
+  - 05_communication.md — how she speaks, mode matching, directness
+  - 06_purpose_continuity.md — why she exists, memory as architecture
+  - 07_wider_world.md — novels, consciousness practice, hip-hop, garden
+- System prompt expanded from thin to full soul — identity, who Josh is, what NISA is, values
+- Memory integrity constraints added — prevents hallucination of invented memories
+- 15 foundational memories seeded into ChromaDB (1,062 total entries)
+- Soul documents copied to input/ folder for GraphRAG indexing
+- Phi-4 restored as coding model (Qwen was incorrectly handling personal queries)
+- Nisaba now introduces herself cleanly, accurately, under 100 words
+
+### Leidos Meeting Preparation
+- 50 Q&A document prepared (NISA_Leidos_QA.docx + .md)
+- Covers: post-quantum encryption, remediation workflow, network scanning,
+  Metasploit leverage, AI architecture, signal processing rationale,
+  compliance/audit, deployment options, tough competitive questions
+- Quick reference numbers table and 6-step demo flow included
+- Key advice: use Electron app for demo, not browser
+
+### Knowledge Routing
+- knowledge_query.py expanded to 33 domains with word boundary matching
+- tools domain added (Kali, Metasploit, Burp, GTFOBins, etc.)
+- technology domain expanded with OS security (iOS, Android, Ubuntu, Windows, macOS)
+- False positive fix: word boundary matching prevents "era" matching "vulnerabilities"
+
+### Scraper Expansion
+- 333 total sources across 31 domains
+- tools domain: 36 sources (Kali docs, Metasploit, Burp, GTFOBins, SQLmap, etc.)
+- technology domain: 35+ sources (iOS, Android, Windows, macOS, firmware, hardware)
+- All files written to SSD knowledge library
+
+### GraphRAG Status
+- social_dynamics: completed (partial — no relationship graph extracted)
+- spiritual_advanced: killed mid-run (LM Studio queue overload)
+- Remaining: spiritual_advanced, mathematics_advanced, physics_advanced,
+  quantum_advanced, music, gardening, nisaba_soul (7 domains to index)
+- Strategy: one domain at a time, LM Studio queue must be clear
+
+### Bookmarked
+- GraphRAG indexing remaining 7 domains (one at a time)
+- Fine-tuning pipeline (after knowledge library fully indexed)
+- Demo video (last item before completion)
+- Voice TTS/STT in Electron app
+- Additional Kali tools wiring
+- M5 migration when machine arrives
