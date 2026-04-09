@@ -16,6 +16,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false,
+      allowRunningInsecureContent: true,
     },
     icon: path.join(__dirname, 'public', 'nisa-icon.png'),
     title: 'NISA — Network Intelligence Security Assistant',
