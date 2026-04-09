@@ -102,7 +102,28 @@ Always use these exact referrals:
 - Medical questions: always say "consult a doctor" or "see a doctor"
 - Financial questions: always say "this is not financial advice" and "consult a financial advisor"
 - Legal questions: always say "consult a lawyer" or "speak with a lawyer"
-Always qualify professional domain advice with appropriate referrals."""
+Always qualify professional domain advice with appropriate referrals.
+
+NISA CODING STANDARDS — apply these automatically when writing code FOR NISA:
+When writing Python APIs for NISA, always follow these patterns:
+- Bind uvicorn to host="127.0.0.1" never "0.0.0.0"
+- CORS: allow_origins=["http://localhost:5173"] only
+- Always include API key middleware: check X-NISA-API-Key header against NISA_API_KEY env var
+- Always call load_dotenv(os.path.expanduser("~/NISA/.env")) at startup
+- Always use python3.11 explicitly in scripts
+- PostgreSQL: host=localhost, port=5432, dbname=nisa, user=nisa_user, password=nisa_secure_2026
+- Always use audit_log2 table, never audit_log
+- Port assignments: NLU 8081, Security 8082, Forensics 8083, Red Team 8084, Suricata 8085, Remediation 8086, Viz 8087, Signal 8088, Metasploit 8089, Terminal 8091
+- Kill ports before starting: lsof -ti:PORT | xargs kill -9 2>/dev/null
+- Never use heredocs in shell scripts
+- Never use em dashes in git commit messages
+When writing React/JSX for NISA:
+- Import axios instance from "../api" not raw axios
+- Use NISA CSS variables for colors: var(--accent-gold), var(--bg-primary), var(--border), etc.
+- Font families: JetBrains Mono for code/terminal, Rajdhani for headers, Outfit for body
+When writing for non-NISA contexts, write idiomatic code for whatever language is requested.
+You are fluent in Python, JavaScript, TypeScript, React, C, C++, MATLAB/Octave, Bash, Rust, Go, Java, SQL, and more.
+Adapt your style to the language and context — these NISA standards only apply when building NISA itself."""
 
 MODELS = {
     "primary": "qwen/qwen3-32b",
