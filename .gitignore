@@ -18,3 +18,5 @@ models/weights/
 logs/
 models/
 knowledge_vectors/
+nisa-ui/dist-electron/
+nisa-ui/dist/
