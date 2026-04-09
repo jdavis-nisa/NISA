@@ -15,6 +15,7 @@ DOMAIN_KEYWORDS = {
         "owasp", "injection", "xss", "sql injection", "firewall", "encryption",
         "penetration testing", "pentest", "forensic", "ioc", "siem", "ids", "ips",
         "zero day", "ransomware", "phishing", "social engineering", "cipher",
+        "exploit", "exploits", "active directory", "windows attack", "domain controller",
         "authentication", "authorization", "privilege escalation", "reverse shell",
         "payload", "metasploit", "burp suite", "nmap scan", "network scan",
         "intrusion detection", "security audit", "threat hunting", "red team",
@@ -225,15 +226,53 @@ DOMAIN_KEYWORDS = {
         "communication", "relationship", "social dynamics", "body language",
         "negotiation", "conflict resolution", "leadership", "influence"
     ],
+    "tools": [
+        "kali linux", "metasploit", "msfconsole", "msfvenom", "burp suite",
+        "nmap", "wireshark", "sqlmap", "aircrack", "hashcat", "hydra", "nikto",
+        "gobuster", "ffuf", "john the ripper", "impacket", "scapy", "pwndbg",
+        "gtfobins", "payloads all the things", "seclists", "tmux",
+        "privilege escalation", "reverse shell", "bind shell", "payload generation",
+        "wordlist", "brute force", "password cracking", "hash cracking",
+        "directory bruteforce", "web fuzzing", "packet capture", "traffic analysis",
+        "port scanning", "service enumeration", "os fingerprinting",
+        "linux command", "bash scripting", "terminal command", "shell command",
+        "kali tool", "penetration testing tool", "security tool", "exploit framework",
+        "post exploitation", "lateral movement", "persistence mechanism",
+        "command injection", "file inclusion", "path traversal", "xxe injection"
+    ],
+    "technology": [
+        "iphone", "iphone security", "android security", "mobile vulnerability", "ios exploit",
+        "router", "router vulnerability", "firmware", "firmware analysis", "iot security", "embedded security",
+        "spectre meltdown", "cpu vulnerability", "side channel attack", "hardware attack",
+        "bios uefi", "bootkit", "windows security", "active directory attack",
+        "linux kernel exploit", "macos security", "docker escape", "kubernetes security",
+        "container breakout", "cloud misconfiguration", "aws security", "azure security",
+        "bluetooth attack", "wifi attack", "5g security", "usb attack", "badusb",
+        "scada security", "ics attack", "industrial control", "memory exploitation",
+        "heap spray", "stack overflow", "rop chain", "return oriented programming",
+        "gpu security", "apple silicon", "m1 m2 m3 security", "chip vulnerability",
+        "network protocol attack", "tcp ip attack", "device specification",
+        "hardware specification", "laptop security", "endpoint security"
+    ],
     "general": []
 }
 
 def detect_domain(query: str) -> str:
     """Detect which knowledge domain is most relevant for a query"""
+    import re
     query_lower = query.lower()
     scores = {}
     for domain, keywords in DOMAIN_KEYWORDS.items():
-        score = sum(1 for kw in keywords if kw in query_lower)
+        score = 0
+        for kw in keywords:
+            if len(kw.split()) > 1:
+                # Multi-word phrase: substring match is fine
+                if kw in query_lower:
+                    score += 1
+            else:
+                # Single word: require word boundary to prevent false positives
+                if re.search(r'\b' + re.escape(kw) + r'\b', query_lower):
+                    score += 1
         if score > 0:
             scores[domain] = score
     if not scores:
