@@ -247,7 +247,8 @@ def chat(request: ChatRequest):
                     {"role": "user", "content": request.message}
                 ],
                 temperature=request.temperature,
-                max_tokens=request.max_tokens
+                max_tokens=request.max_tokens,
+                extra_body={"num_ctx": 32768}
             )
             response_text = completion.choices[0].message.content
         
@@ -307,7 +308,8 @@ async def chat_stream(request: ChatRequest):
                     ],
                     temperature=request.temperature,
                     max_tokens=request.max_tokens,
-                    stream=True
+                    stream=True,
+                    extra_body={"num_ctx": 32768}
                 )
                 # Send model info first
                 import json
