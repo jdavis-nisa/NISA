@@ -174,6 +174,10 @@ export default function NetworkTopology({ scanData, standalone = false }) {
         summary: `Topology scan of ${target} - ${graph.stats?.hosts ?? 0} hosts, ${graph.stats?.openPorts ?? 0} open ports, ${graph.stats?.critical ?? 0} critical`,
         detail: null
       })
+      // Auto-ingest into Asset Inventory
+      try {
+        await api.post("http://localhost:8097/assets/ingest/nmap", res.data)
+      } catch(e) { console.warn("Asset ingest failed:", e) }
     } catch(e) {
       setError(e.response?.data?.detail || e.message)
     }

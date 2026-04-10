@@ -87,6 +87,10 @@ function NmapPanel() {
         summary: `Target: ${d.target} - ${d.ports?.length ?? 0} open ports. ${d.summary || ""}`.trim(),
         detail: { target: d.target, ports: d.ports, scan_type: scanType }
       })
+      // Auto-ingest into Asset Inventory
+      try {
+        await api.post("http://localhost:8097/assets/ingest/nmap", d)
+      } catch(e) { console.warn("Asset ingest failed:", e) }
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }

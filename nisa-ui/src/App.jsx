@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play, Server } from "lucide-react"
 import { onNewContext } from "./SessionContext"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
@@ -16,6 +16,7 @@ import NetworkTopology from './components/NetworkTopology'
 import ThreatIntel from './components/ThreatIntel'
 import AdversarialSim from './components/AdversarialSim'
 import Playbook from './components/Playbook'
+import AssetInventory from './components/AssetInventory'
 import NisabaOrb from './components/NisabaOrb'
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
               <Route path="/threatintel" element={<ThreatIntel />} />
               <Route path="/adversarial" element={<AdversarialSim />} />
               <Route path="/playbook" element={<Playbook />} />
+              <Route path="/assets" element={<AssetInventory />} />
             </Routes>
           </main>
         </div>
@@ -106,6 +108,7 @@ function Header() {
         <StatusDot label="PHOENIX" port={6006} />
         <StatusDot label="SESSION CTX" port={8095} />
         <StatusDot label="PLAYBOOK" port={8096} />
+        <StatusDot label="ASSETS" port={8097} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
@@ -182,6 +185,7 @@ function Sidebar() {
     { to: "/threatintel", icon: Shield, label: "THREAT INTEL", sublabel: "CVE & ATT&CK" },
     { to: "/adversarial", icon: Shield, label: "ADVERSARIAL", sublabel: "Kill Chain Sim" },
     { to: "/playbook", icon: Play, label: "PLAYBOOK", sublabel: "Automated Workflows" },
+    { to: "/assets", icon: Server, label: "ASSETS", sublabel: "Asset Inventory" },
   ]
   return (
     <nav style={{
