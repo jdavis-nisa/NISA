@@ -192,6 +192,51 @@ def select_model(message: str) -> tuple[str, str]:
     
     return MODELS["primary"], "primary"
 
+ASSET_KEYWORDS = [
+    "asset", "assets", "inventory", "host", "hosts", "ip address",
+    "open port", "open ports", "rdp", "ssh exposed", "smb exposed",
+    "which hosts", "what hosts", "show me hosts", "list hosts",
+    "subnet", "network scan", "discovered", "attack surface",
+    "exposed service", "exposed port", "critical asset", "high risk asset",
+    "scanned recently", "last scan", "how many assets", "what assets"
+]
+
+def is_asset_query(message: str) -> bool:
+    msg = message.lower()
+    return any(k in msg for k in ASSET_KEYWORDS)
+
+def fetch_asset_context() -> str:
+    try:
+        res = httpx.get("http://127.0.0.1:8097/assets", timeout=3.0)
+        if res.status_code != 200:
+            return ""
+        assets = res.json().get("assets", [])
+        if not assets:
+            return "ASSET INVENTORY: No assets discovered yet. Run an Nmap scan to populate the inventory."
+        lines = ["LIVE ASSET INVENTORY DATA:"]
+        lines.append(f"Total assets: {len(assets)}")
+        risk_counts = {}
+        for a in assets:
+            r = a.get("risk_level", "unknown")
+            risk_counts[r] = risk_counts.get(r, 0) + 1
+        lines.append(f"Risk breakdown: {risk_counts}")
+        lines.append("")
+        lines.append("ASSETS:")
+        for a in assets:
+            line = f"- {a['ip']}"
+            if a.get("hostname"):
+                line += f" ({a['hostname']})"
+            line += f" | risk: {a.get('risk_level','unknown')}"
+            line += f" | ports: {a.get('port_count', 0)}"
+            line += f" | scans: {a.get('scan_count', 0)}"
+            line += f" | last seen: {a.get('last_seen','unknown')}"
+            if a.get("tags"):
+                line += f" | tags: {a['tags']}"
+            lines.append(line)
+        return "\n".join(lines)
+    except Exception as e:
+        return f"ASSET INVENTORY: Could not fetch live data ({e})"
+
 class ChatRequest(BaseModel):
     message: str
     temperature: Optional[float] = 0.7
@@ -253,6 +298,12 @@ def chat(request: ChatRequest):
                         system_prompt += f"\n\nSESSION CONTEXT — OPERATIONS THIS SESSION:\n{ctx_summary}\n\nYou have full awareness of these operations. If Josh asks about any of them, answer directly from this context."
             except Exception:
                 pass
+
+            # Inject live asset data if this is an asset query
+            if is_asset_query(request.message):
+                asset_context = fetch_asset_context()
+                if asset_context:
+                    system_prompt += f"\n\n{asset_context}\n\nAnswer the user's question using this live asset data. Be specific about IPs, ports, and risk levels."
             
             completion = client.chat.completions.create(
                 model=model,
@@ -320,6 +371,12 @@ async def chat_stream(request: ChatRequest):
                     system_prompt += f"\n\nSESSION CONTEXT — OPERATIONS THIS SESSION:\n{ctx_summary}\n\nYou have full awareness of these operations. If Josh asks about any of them, answer directly from this context."
         except Exception:
             pass
+
+        # Inject live asset data if this is an asset query
+        if is_asset_query(request.message):
+            asset_context = fetch_asset_context()
+            if asset_context:
+                system_prompt += f"\n\n{asset_context}\n\nAnswer the user's question using this live asset data. Be specific about IPs, ports, and risk levels."
 
         def generate():
             full_response = ""
