@@ -22,6 +22,7 @@ export default function Signal() {
     { id: "filter", label: "FILTER DESIGN" },
     { id: "ambiguity", label: "AMBIGUITY" },
     { id: "octave", label: "OCTAVE" },
+    { id: "ew", label: "EW THREAT ANALYSIS" },
   ]
 
   return (
@@ -60,6 +61,7 @@ export default function Signal() {
       {activeTab === "octave" && <OctaveTab />}
       {activeTab === "library" && <WaveformLibraryTab />}
       {activeTab === "rdmap" && <RangeDopplerTab />}
+      {activeTab === "ew" && <EWThreatTab />}
     </div>
   )
 }
@@ -783,6 +785,162 @@ disp(sprintf('Num pulses: %d', N));
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+
+const inputStyle = { background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace", fontSize: "12px", padding: "7px 10px", width: "100%", outline: "none", boxSizing: "border-box" }
+function Panel({ title, children }) {
+  return (
+    <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "4px" }}>
+      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
+        <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-gold)" }}>{title}</span>
+      </div>
+      <div style={{ padding: "14px 16px" }}>{children}</div>
+    </div>
+  )
+}
+function FieldLabel({ children }) {
+  return <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", letterSpacing: "0.15em", marginBottom: "4px" }}>{children}</div>
+}
+
+const SIG_API = "http://localhost:8088"
+
+function EWThreatTab() {
+  const [mode, setMode] = useState("manual")
+  const [form, setForm] = useState({ waveform_type: "pulse", bandwidth_hz: 1000000, frequency_hz: 9500000000, pulse_width_s: 0.000001, prf_hz: 1000 })
+  const [file, setFile] = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const analyze = async () => {
+    setLoading(true); setError(""); setResult(null)
+    try {
+      let res
+      if (mode === "upload" && file) {
+        const fd = new FormData()
+        fd.append("file", file)
+        res = await fetch(`${SIG_API}/ew/analyze/upload`, { method: "POST", headers: { "X-NISA-API-Key": import.meta.env.VITE_NISA_API_KEY || "d551fd7e05134c52b84286c201f0f36d8ddeb5e0611ed771ba44d6a4264f39cf" }, body: fd })
+        res = await res.json()
+      } else {
+        const r = await api.post(`${SIG_API}/ew/analyze`, form)
+        res = r.data
+      }
+      setResult(res)
+    } catch(e) { setError(e.message) }
+    setLoading(false)
+  }
+
+  const sevColor = (s) => ({ critical: "var(--danger)", high: "#f59e0b", medium: "var(--accent-cyan, #00d4ff)", low: "var(--success)" })[s] || "var(--text-dim)"
+  const vulnColor = (v) => ({ CRITICAL: "var(--danger)", HIGH: "#f59e0b", MEDIUM: "var(--accent-cyan, #00d4ff)", LOW: "var(--success)" })[v] || "var(--text-dim)"
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <Panel title="EW THREAT ANALYSIS">
+        <div style={{ marginBottom: "12px", display: "flex", gap: "8px" }}>
+          {["manual", "upload"].map(m => (
+            <button key={m} onClick={() => setMode(m)} style={{ background: mode === m ? "var(--accent-gold-glow)" : "transparent", border: `1px solid ${mode === m ? GOLD : BORDER}`, color: mode === m ? GOLD : DIM, borderRadius: "3px", padding: "5px 14px", cursor: "pointer", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>{m === "manual" ? "MANUAL PARAMETERS" : "UPLOAD WAVEFORM FILE"}</button>
+          ))}
+        </div>
+        {mode === "manual" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <FieldLabel>WAVEFORM TYPE</FieldLabel>
+                <select value={form.waveform_type} onChange={e => setForm({...form, waveform_type: e.target.value})} style={inputStyle}>
+                  {["pulse","lfm","chirp","barker","cw","sine"].map(w => <option key={w} value={w}>{w.toUpperCase()}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <FieldLabel>FREQUENCY (Hz)</FieldLabel>
+                <input type="number" value={form.frequency_hz} onChange={e => setForm({...form, frequency_hz: parseFloat(e.target.value)})} style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <FieldLabel>BANDWIDTH (Hz)</FieldLabel>
+                <input type="number" value={form.bandwidth_hz} onChange={e => setForm({...form, bandwidth_hz: parseFloat(e.target.value)})} style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <FieldLabel>PULSE WIDTH (s)</FieldLabel>
+                <input type="number" value={form.pulse_width_s} onChange={e => setForm({...form, pulse_width_s: parseFloat(e.target.value)})} style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <FieldLabel>PRF (Hz)</FieldLabel>
+                <input type="number" value={form.prf_hz} onChange={e => setForm({...form, prf_hz: parseFloat(e.target.value)})} style={inputStyle} />
+              </div>
+            </div>
+          </div>
+        )}
+        {mode === "upload" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <FieldLabel>UPLOAD WAVEFORM FILE (CSV, JSON, WAV)</FieldLabel>
+            <input type="file" accept=".csv,.json,.wav" onChange={e => setFile(e.target.files[0])} style={{ ...inputStyle, padding: "6px" }} />
+            {file && <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--success)" }}>Selected: {file.name}</div>}
+          </div>
+        )}
+        {error && <div style={{ color: "var(--danger)", fontFamily: "JetBrains Mono, monospace", fontSize: "11px", marginTop: "8px" }}>{error}</div>}
+        <button onClick={analyze} disabled={loading || (mode === "upload" && !file)} style={{ marginTop: "12px", background: loading ? "transparent" : GOLD, border: `1px solid ${GOLD}`, color: loading ? GOLD : "var(--bg-primary)", borderRadius: "3px", padding: "8px 20px", cursor: "pointer", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.1em" }}>{loading ? "ANALYZING..." : "ANALYZE EW THREATS"}</button>
+      </Panel>
+
+      {result && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Panel title="THREAT ASSESSMENT">
+            <div style={{ display: "flex", gap: "16px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div style={{ textAlign: "center", padding: "10px 16px", background: "var(--bg-primary)", borderRadius: "3px", border: `1px solid ${vulnColor(result.overall_vulnerability)}` }}>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "20px", fontWeight: 700, color: vulnColor(result.overall_vulnerability) }}>{result.overall_vulnerability}</div>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: DIM, marginTop: "2px" }}>OVERALL VULNERABILITY</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "10px 16px", background: "var(--bg-primary)", borderRadius: "3px", border: "1px solid var(--border)" }}>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "20px", fontWeight: 700, color: result.lpi_score >= 60 ? "var(--success)" : result.lpi_score >= 30 ? "#f59e0b" : "var(--danger)" }}>{result.lpi_score}</div>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: DIM, marginTop: "2px" }}>LPI SCORE</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "10px 16px", background: "var(--bg-primary)", borderRadius: "3px", border: "1px solid var(--border)" }}>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "20px", fontWeight: 700, color: "var(--danger)" }}>{result.threats_identified?.length || 0}</div>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: DIM, marginTop: "2px" }}>THREATS FOUND</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "10px 16px", background: "var(--bg-primary)", borderRadius: "3px", border: "1px solid var(--success)" }}>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "20px", fontWeight: 700, color: "var(--success)" }}>{result.resistant_to?.length || 0}</div>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: DIM, marginTop: "2px" }}>RESISTANT TO</div>
+              </div>
+            </div>
+            {result.threats_identified?.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <FieldLabel>IDENTIFIED THREATS</FieldLabel>
+                {result.threats_identified.map(t => (
+                  <div key={t.threat_id} style={{ padding: "10px 12px", background: "var(--bg-primary)", borderRadius: "3px", border: `1px solid ${sevColor(t.severity)}44` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                      <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "13px", color: sevColor(t.severity) }}>{t.name}</span>
+                      <span style={{ background: sevColor(t.severity) + "22", border: `1px solid ${sevColor(t.severity)}`, borderRadius: "2px", padding: "1px 6px", fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: sevColor(t.severity), textTransform: "uppercase" }}>{t.severity}</span>
+                    </div>
+                    <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>{t.description}</div>
+                    <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--accent-cyan, #00d4ff)" }}>REC: {t.countermeasure}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.resistant_to?.length > 0 && (
+              <div style={{ marginTop: "10px" }}>
+                <FieldLabel>RESISTANT TO</FieldLabel>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
+                  {result.resistant_to.map(r => (
+                    <span key={r} style={{ background: "rgba(34,197,94,0.1)", border: "1px solid var(--success)", borderRadius: "10px", padding: "2px 10px", fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--success)" }}>{r}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.spectral_analysis && Object.keys(result.spectral_analysis).length > 0 && (
+              <div style={{ marginTop: "10px" }}>
+                <FieldLabel>SPECTRAL ANALYSIS</FieldLabel>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  {result.spectral_analysis.peak_frequency_hz && <div>Peak Frequency: {(result.spectral_analysis.peak_frequency_hz / 1e6).toFixed(3)} MHz</div>}
+                  {result.spectral_analysis.spectral_flatness !== undefined && <div>Spectral Flatness: {result.spectral_analysis.spectral_flatness.toFixed(4)}</div>}
+                </div>
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
     </div>
   )
 }

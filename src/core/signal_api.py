@@ -18,7 +18,7 @@ from scipy.fft import fft, fftfreq
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from fastapi import HTTPException, FastAPI, Request
+from fastapi import HTTPException, FastAPI, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -337,6 +337,118 @@ def get_waveform_types():
         ]
     }
 
+
+import io
+import csv as csv_module
+
+EW_THREATS = {
+    'noise_jamming': {'name': 'Noise Jamming', 'description': 'Broadband noise to mask radar returns', 'vulnerable': ['cw','pulse','sine'], 'resistant': ['lfm','barker','chirp'], 'severity': 'high', 'countermeasure': 'Use LPI waveforms, pulse compression'},
+    'spot_jamming': {'name': 'Spot Jamming', 'description': 'High power on specific frequency', 'vulnerable': ['cw','sine','pulse'], 'resistant': ['lfm','chirp','barker'], 'severity': 'high', 'countermeasure': 'Frequency agility, LFM waveforms'},
+    'drfm_jamming': {'name': 'DRFM Deceptive Jamming', 'description': 'Records and retransmits modified signal', 'vulnerable': ['pulse','lfm','barker','cw','chirp'], 'resistant': [], 'severity': 'critical', 'countermeasure': 'Randomize waveform parameters per pulse'},
+    'range_gate_pulloff': {'name': 'Range Gate Pull-Off', 'description': 'Pulls range gate off true target', 'vulnerable': ['pulse','cw'], 'resistant': ['lfm','barker'], 'severity': 'high', 'countermeasure': 'Leading edge tracking, LFM waveforms'},
+    'velocity_gate_pulloff': {'name': 'Velocity Gate Pull-Off', 'description': 'Pulls Doppler gate off true velocity', 'vulnerable': ['cw','pulse'], 'resistant': ['lfm','chirp'], 'severity': 'high', 'countermeasure': 'Wideband Doppler processing'},
+    'lpi_detection': {'name': 'LPI Detection Threat', 'description': 'Intercept receivers detect emissions', 'vulnerable': ['pulse','cw','sine'], 'resistant': ['lfm','barker','chirp'], 'severity': 'critical', 'countermeasure': 'Use LPI waveforms, reduce peak power'},
+    'chaff': {'name': 'Chaff', 'description': 'Metallic strips creating false returns', 'vulnerable': ['pulse','cw'], 'resistant': ['lfm','chirp'], 'severity': 'medium', 'countermeasure': 'MTI/MTD processing, high range resolution'},
+    'sweep_jamming': {'name': 'Sweep Jamming', 'description': 'Jammer sweeps across frequency band', 'vulnerable': ['pulse','cw'], 'resistant': ['lfm','barker'], 'severity': 'high', 'countermeasure': 'Frequency hopping, wideband receivers'},
+}
+
+def analyze_ew_threats(waveform_type, bandwidth_hz, frequency_hz, pulse_width_s, prf_hz):
+    wt = waveform_type.lower()
+    threats = []
+    resistant_to = []
+    for tid, t in EW_THREATS.items():
+        if wt in t['vulnerable']:
+            threats.append({'threat_id': tid, 'name': t['name'], 'description': t['description'], 'severity': t['severity'], 'countermeasure': t['countermeasure']})
+        elif wt in t['resistant']:
+            resistant_to.append(t['name'])
+    lpi_score = 0
+    if bandwidth_hz > 1e6: lpi_score += 30
+    if wt in ['lfm','barker','chirp']: lpi_score += 40
+    if pulse_width_s > 0 and pulse_width_s < 1e-6: lpi_score += 15
+    if prf_hz > 1000: lpi_score += 15
+    lpi_score = min(100, lpi_score)
+    critical = sum(1 for t in threats if t['severity'] == 'critical')
+    high = sum(1 for t in threats if t['severity'] == 'high')
+    overall = 'CRITICAL' if critical > 0 else 'HIGH' if high >= 2 else 'MEDIUM' if high >= 1 else 'LOW'
+    return {'waveform_type': waveform_type, 'frequency_hz': frequency_hz, 'bandwidth_hz': bandwidth_hz,
+            'pulse_width_s': pulse_width_s, 'prf_hz': prf_hz, 'overall_vulnerability': overall,
+            'lpi_score': lpi_score, 'threats_identified': threats, 'resistant_to': resistant_to,
+            'recommendations': list(set(t['countermeasure'] for t in threats[:3]))}
+
+class EWAnalysisRequest(BaseModel):
+    waveform_type: str = 'pulse'
+    bandwidth_hz: float = 1e6
+    frequency_hz: float = 9.5e9
+    pulse_width_s: float = 1e-6
+    prf_hz: float = 1000.0
+
+@app.post('/ew/analyze')
+def ew_threat_analysis(req: EWAnalysisRequest):
+    return analyze_ew_threats(req.waveform_type, req.bandwidth_hz, req.frequency_hz, req.pulse_width_s, req.prf_hz)
+
+@app.post('/ew/analyze/upload')
+async def ew_analyze_upload(file: UploadFile = File(...)):
+    content = await file.read()
+    fname = file.filename.lower()
+    params = {'waveform_type': 'unknown', 'bandwidth_hz': 0.0, 'frequency_hz': 0.0, 'pulse_width_s': 0.0, 'prf_hz': 0.0}
+    samples = []
+    try:
+        if fname.endswith('.csv'):
+            text = content.decode('utf-8')
+            reader = csv_module.DictReader(io.StringIO(text))
+            rows = list(reader)
+            if rows:
+                cols = list(rows[0].keys())
+                amp_col = next((c for c in cols if any(k in c.lower() for k in ['amp','val','y'])), cols[-1])
+                time_col = next((c for c in cols if any(k in c.lower() for k in ['time','t','x'])), cols[0])
+                times = [float(r[time_col]) for r in rows if r.get(time_col)]
+                samples = [float(r[amp_col]) for r in rows if r.get(amp_col)]
+                if len(times) > 1:
+                    dt = times[1] - times[0]
+                    sr = 1.0 / dt if dt > 0 else 1e6
+                    params['bandwidth_hz'] = sr / 2
+                    params['prf_hz'] = 1000.0
+            params['waveform_type'] = 'captured_csv'
+        elif fname.endswith('.json'):
+            import json as jm
+            data = jm.loads(content)
+            for k in ['waveform_type','bandwidth_hz','frequency_hz','pulse_width_s','prf_hz']:
+                if k in data: params[k] = data[k]
+        elif fname.endswith('.wav'):
+            import wave, struct
+            with wave.open(io.BytesIO(content)) as wf:
+                sr = wf.getframerate()
+                nf = wf.getnframes()
+                raw = wf.readframes(nf)
+                samples = list(struct.unpack(str(nf) + 'h', raw[:nf*2]))
+                params['bandwidth_hz'] = sr / 2
+                params['waveform_type'] = 'captured_wav'
+        else:
+            raise HTTPException(status_code=400, detail='Unsupported format. Use CSV, JSON, or WAV.')
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=400, detail=f'Parse error: {str(e)}')
+    spectral = {}
+    if len(samples) > 10:
+        try:
+            import numpy as np
+            arr = np.array(samples, dtype=float)
+            fft_vals = np.abs(np.fft.rfft(arr))
+            peak_idx = int(np.argmax(fft_vals))
+            if params['bandwidth_hz'] > 0:
+                freq_res = params['bandwidth_hz'] / len(fft_vals)
+                spectral['peak_frequency_hz'] = float(peak_idx * freq_res)
+                spectral['spectral_flatness'] = float(np.mean(fft_vals) / (np.max(fft_vals) + 1e-10))
+                if params['frequency_hz'] == 0: params['frequency_hz'] = spectral['peak_frequency_hz']
+        except Exception: pass
+    result = analyze_ew_threats(params['waveform_type'], params['bandwidth_hz'], params['frequency_hz'], params['pulse_width_s'], params['prf_hz'])
+    result['source'] = 'file_upload'
+    result['filename'] = file.filename
+    result['spectral_analysis'] = spectral
+    return result
+
+@app.get('/ew/threats')
+def get_ew_threats():
+    return {'threats': [{'id': k, 'name': v['name'], 'description': v['description']} for k, v in EW_THREATS.items()]}
 if __name__ == "__main__":
     print("Starting NISA Signal Processing API on port 8088...")
     uvicorn.run(app, host="127.0.0.1", port=8088, log_level="warning")
