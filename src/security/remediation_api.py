@@ -1,3 +1,5 @@
+import paramiko
+import io
 from fastapi import HTTPException, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -446,6 +448,89 @@ def generate_report(session_id: str, remediation_id: str):
         media_type="application/pdf",
         filename=f"NISA_Remediation_{remediation_id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     )
+
+
+# -- SSH Remote Patching ------------------------------------------------
+class SSHPatchRequest(BaseModel):
+    session_id: str
+    remediation_id: str
+    host: str
+    port: int = 22
+    username: str
+    password: Optional[str] = None
+    key_path: Optional[str] = None
+    remote_file_path: str
+
+@app.post("/ssh/patch")
+async def ssh_patch(request: SSHPatchRequest):
+    if request.session_id not in sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session = sessions[request.session_id]
+    remediation = next((r for r in session["remediations"]
+                        if r["remediation_id"] == request.remediation_id), None)
+    if not remediation:
+        raise HTTPException(status_code=404, detail="Remediation not found")
+    if not remediation.get("authorized"):
+        raise HTTPException(status_code=403, detail="Patch not authorized. Complete authorization step first.")
+    patch_code = remediation.get("patch_code", "")
+    if not patch_code:
+        raise HTTPException(status_code=400, detail="No patch code available")
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        connect_kwargs = {"hostname": request.host, "port": request.port, "username": request.username, "timeout": 15}
+        if request.key_path:
+            connect_kwargs["key_filename"] = request.key_path
+        elif request.password:
+            connect_kwargs["password"] = request.password
+        else:
+            raise HTTPException(status_code=400, detail="Either password or key_path required")
+        ssh.connect(**connect_kwargs)
+        sftp = ssh.open_sftp()
+        try:
+            with sftp.open(request.remote_file_path, "r") as f:
+                original_content = f.read().decode("utf-8")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Cannot read remote file: {e}")
+        from datetime import datetime as dt
+        backup_path = f"{request.remote_file_path}.nisa_backup_{dt.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        with sftp.open(backup_path, "w") as f:
+            f.write(original_content)
+        with sftp.open(request.remote_file_path, "w") as f:
+            f.write(patch_code)
+        with sftp.open(request.remote_file_path, "r") as f:
+            verified = f.read().decode("utf-8")
+        sftp.close()
+        ssh.close()
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO audit_log2 (operation, input_hash, output_hash, model_used, passed, details) VALUES (%s, %s, %s, %s, %s, %s)",
+                ("ssh_remote_patch", request.host, backup_path, "paramiko", True,
+                 f"Remote patch applied to {request.host}:{request.remote_file_path} by {request.username}. Backup: {backup_path}")
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+        return {"status": "success", "host": request.host, "remote_file": request.remote_file_path,
+                "backup_path": backup_path, "bytes_written": len(patch_code),
+                "verified": verified == patch_code,
+                "message": f"Patch applied successfully. Backup saved to {backup_path}"}
+    except HTTPException:
+        raise
+    except paramiko.AuthenticationException:
+        raise HTTPException(status_code=401, detail="SSH authentication failed. Check credentials.")
+    except paramiko.NoValidConnectionsError:
+        raise HTTPException(status_code=503, detail=f"Cannot connect to {request.host}:{request.port}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"SSH patch failed: {str(e)}")
+    finally:
+        try:
+            ssh.close()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     import uvicorn

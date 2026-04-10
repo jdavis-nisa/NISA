@@ -375,6 +375,9 @@ export default function Remediation() {
             </div>
           )}
 
+          {/* SSH Remote Patch Panel */}
+          <SSHPatchPanel session={session} result={result} />
+
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button onClick={async () => {
               try {
@@ -402,6 +405,116 @@ export default function Remediation() {
               NEW SESSION
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SSHPatchPanel({ session, result }) {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ host: "", port: "22", username: "", password: "", key_path: "", remote_file_path: "" })
+  const [authMethod, setAuthMethod] = useState("password")
+  const [loading, setLoading] = useState(false)
+  const [patchResult, setPatchResult] = useState(null)
+  const [error, setError] = useState("")
+
+  const run = async () => {
+    setLoading(true)
+    setError("")
+    setPatchResult(null)
+    try {
+      const payload = {
+        session_id: session.session_id,
+        remediation_id: result.remediation_id,
+        host: form.host,
+        port: parseInt(form.port) || 22,
+        username: form.username,
+        remote_file_path: form.remote_file_path,
+      }
+      if (authMethod === "password") payload.password = form.password
+      else payload.key_path = form.key_path
+      const res = await api.post(`${REM_API}/ssh/patch`, payload)
+      setPatchResult(res.data)
+    } catch(e) {
+      setError(e.response?.data?.detail || e.message)
+    }
+    setLoading(false)
+  }
+
+  const fl = (label, key, placeholder, type="text") => (
+    <div style={{ flex: 1, minWidth: "140px" }}>
+      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", letterSpacing: "0.1em", marginBottom: "3px" }}>{label}</div>
+      <input type={type} value={form[key]} onChange={e => setForm({...form, [key]: e.target.value})}
+        placeholder={placeholder}
+        style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: "3px",
+          color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace", fontSize: "11px",
+          padding: "6px 8px", outline: "none", boxSizing: "border-box" }} />
+    </div>
+  )
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "4px", marginBottom: "12px", overflow: "hidden" }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: "100%", background: "var(--bg-secondary)", border: "none", borderBottom: open ? "1px solid var(--border)" : "none",
+        color: "var(--text-secondary)", cursor: "pointer", padding: "10px 14px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em"
+      }}>
+        <span>SSH REMOTE PATCH (OPTIONAL)</span>
+        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div style={{ padding: "14px", background: "var(--bg-primary)", display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px", color: "var(--text-dim)", lineHeight: 1.5 }}>
+            Apply this patch directly to a remote host over SSH. Credentials are never stored. A backup is created automatically before any change.
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {fl("HOST / IP", "host", "192.168.86.25")}
+            {fl("SSH PORT", "port", "22")}
+            {fl("USERNAME", "username", "admin")}
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", letterSpacing: "0.1em" }}>AUTH METHOD</div>
+            {["password", "key"].map(m => (
+              <button key={m} onClick={() => setAuthMethod(m)} style={{
+                background: authMethod === m ? "var(--accent-gold-glow)" : "transparent",
+                border: `1px solid ${authMethod === m ? "var(--accent-gold)" : "var(--border)"}`,
+                color: authMethod === m ? "var(--accent-gold)" : "var(--text-dim)",
+                borderRadius: "3px", padding: "3px 10px", cursor: "pointer",
+                fontFamily: "JetBrains Mono, monospace", fontSize: "10px", textTransform: "uppercase"
+              }}>{m}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {authMethod === "password"
+              ? fl("PASSWORD", "password", "••••••••", "password")
+              : fl("KEY FILE PATH", "key_path", "/Users/you/.ssh/id_rsa")}
+            {fl("REMOTE FILE PATH", "remote_file_path", "/etc/app/config.py")}
+          </div>
+          {error && <div style={{ color: "var(--danger)", fontFamily: "JetBrains Mono, monospace", fontSize: "11px" }}>{error}</div>}
+          {patchResult && (
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid var(--success)", borderRadius: "3px", padding: "10px 12px" }}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", color: "var(--success)", letterSpacing: "0.1em", marginBottom: "4px" }}>
+                PATCH APPLIED SUCCESSFULLY
+              </div>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                Host: {patchResult.host}<br />
+                File: {patchResult.remote_file}<br />
+                Backup: {patchResult.backup_path}<br />
+                Verified: {patchResult.verified ? "Yes" : "No"}<br />
+                Bytes written: {patchResult.bytes_written}
+              </div>
+            </div>
+          )}
+          <button onClick={run} disabled={loading || !form.host || !form.username || !form.remote_file_path} style={{
+            background: loading ? "transparent" : "var(--accent-gold)",
+            border: "1px solid var(--accent-gold)",
+            color: loading ? "var(--accent-gold)" : "var(--bg-primary)",
+            borderRadius: "3px", padding: "8px 18px", cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "13px", letterSpacing: "0.1em",
+            alignSelf: "flex-start"
+          }}>{loading ? "CONNECTING..." : "APPLY PATCH VIA SSH"}</button>
         </div>
       )}
     </div>
