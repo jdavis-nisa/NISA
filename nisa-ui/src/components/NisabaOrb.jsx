@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react"
-import { Brain, X, Send, Minimize2 } from "lucide-react"
+import { Brain, X, Send, Minimize2, AlertTriangle } from "lucide-react"
 import api from "../api"
 import ReactMarkdown from "react-markdown"
+import { onAlert, acknowledgeAlerts } from "../SessionContext"
 
 const NLU_API = "http://localhost:8081"
 
@@ -11,12 +12,27 @@ export default function NisabaOrb() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [spinning, setSpinning] = useState(false)
+  const [alerts, setAlerts] = useState([])
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus()
   }, [open])
+
+  useEffect(() => {
+    const unsub = onAlert((incoming) => {
+      setAlerts(incoming)
+      if (incoming.length > 0 && !open) setOpen(true)
+    })
+    return unsub
+  }, [])
+
+  const hasAlerts = alerts.length > 0
+
+  const handleOpen = () => {
+    setOpen(o => !o)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -84,6 +100,32 @@ export default function NisabaOrb() {
               </button>
             </div>
           </div>
+
+          {/* Alert Banner */}
+          {alerts.length > 0 && (
+            <div style={{
+              background: "rgba(239,68,68,0.12)", borderBottom: "1px solid var(--danger)",
+              padding: "8px 12px"
+            }}>
+              {alerts.map(a => (
+                <div key={a.id} style={{ marginBottom: alerts.length > 1 ? "6px" : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                    <AlertTriangle size={11} color="var(--danger)" />
+                    <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", color: "var(--danger)", letterSpacing: "0.1em" }}>{a.title}</span>
+                  </div>
+                  <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "10px", color: "var(--text-secondary)", lineHeight: 1.4 }}>{a.summary}</div>
+                  {a.recommendation && (
+                    <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--accent-cyan, #00d4ff)", marginTop: "3px" }}>{a.recommendation}</div>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => { acknowledgeAlerts(); setAlerts([]) }} style={{
+                marginTop: "6px", background: "transparent", border: "1px solid var(--danger)",
+                color: "var(--danger)", borderRadius: "3px", padding: "2px 8px", cursor: "pointer",
+                fontFamily: "JetBrains Mono, monospace", fontSize: "9px"
+              }}>ACKNOWLEDGE</button>
+            </div>
+          )}
 
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -165,26 +207,25 @@ export default function NisabaOrb() {
 
       {/* Orb button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         style={{
           width: "48px", height: "48px", borderRadius: "50%",
-          background: open ? "var(--accent-gold)" : "var(--bg-secondary)",
-          border: "2px solid var(--accent-gold)",
+          background: hasAlerts ? "var(--danger)" : open ? "var(--accent-gold)" : "var(--bg-secondary)",
+          border: `2px solid ${hasAlerts ? "var(--danger)" : "var(--accent-gold)"}`,
           cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: open
-            ? "0 0 20px rgba(212,175,55,0.5)"
-            : "0 0 12px rgba(212,175,55,0.2)",
+          boxShadow: hasAlerts
+            ? "0 0 20px rgba(239,68,68,0.6)"
+            : open ? "0 0 20px rgba(212,175,55,0.5)" : "0 0 12px rgba(212,175,55,0.2)",
           transition: "all 0.2s ease",
-          animation: spinning ? "orbSpin 1s linear infinite" : "none"
+          animation: hasAlerts ? "orbPulse 1.5s ease-in-out infinite" : spinning ? "orbSpin 1s linear infinite" : "none"
         }}
-        title="Ask Nisaba"
+        title={hasAlerts ? `${alerts.length} alert(s) — click to view` : "Ask Nisaba"}
       >
-        <Brain
-          size={22}
-          color={open ? "var(--bg-primary)" : "var(--accent-gold)"}
-          style={{ transition: "color 0.2s ease" }}
-        />
+        {hasAlerts
+          ? <AlertTriangle size={22} color="white" />
+          : <Brain size={22} color={open ? "var(--bg-primary)" : "var(--accent-gold)"} style={{ transition: "color 0.2s ease" }} />
+        }
       </button>
     </div>
   )

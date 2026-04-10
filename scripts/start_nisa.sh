@@ -34,6 +34,7 @@ lsof -ti:6006 | xargs kill -9 2>/dev/null || true
 lsof -ti:8095 | xargs kill -9 2>/dev/null || true
 lsof -ti:8096 | xargs kill -9 2>/dev/null || true
 lsof -ti:8097 | xargs kill -9 2>/dev/null || true
+lsof -ti:8098 | xargs kill -9 2>/dev/null || true
 sleep 1
 echo "       Ports 8081, 8082, 8083, 6006, 8095 cleared"
 
@@ -192,7 +193,18 @@ else
     echo "       Asset Inventory API failed to start - check logs/asset_api.log"
 fi
 
-# ── Step 16: Threat Intel API ────────────────────────────────────
+# ── Step 16: CVE Watchlist API ──────────────────────────────────
+echo "[ 16/17 ] Starting CVE Watchlist API (port 8098)..."
+python3.11 "$NISA_DIR/src/core/watchlist_api.py" > "$NISA_DIR/logs/watchlist_api.log" 2>&1 &
+WLA_PID=$!
+sleep 2
+if curl -s http://127.0.0.1:8098/health > /dev/null 2>&1; then
+    echo "       CVE Watchlist API online - PID $WLA_PID"
+else
+    echo "       CVE Watchlist API failed to start - check logs/watchlist_api.log"
+fi
+
+# ── Step 17: Threat Intel API ────────────────────────────────────
 # (started separately if present)
 
 # ── Step 15: Adversarial API ─────────────────────────────────────
@@ -227,6 +239,7 @@ echo "║  Signal Proc  http://localhost:8088      ║"
 echo "║  Session Ctx  http://localhost:8095      ║"
 echo "║  Playbook API http://localhost:8096      ║"
 echo "║  Asset API    http://localhost:8097      ║"
+echo "║  Watchlist    http://localhost:8098      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play, Server } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play, Server, Bell } from "lucide-react"
 import { onNewContext } from "./SessionContext"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
@@ -17,6 +17,7 @@ import ThreatIntel from './components/ThreatIntel'
 import AdversarialSim from './components/AdversarialSim'
 import Playbook from './components/Playbook'
 import AssetInventory from './components/AssetInventory'
+import CVEWatchlist from './components/CVEWatchlist'
 import NisabaOrb from './components/NisabaOrb'
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
               <Route path="/adversarial" element={<AdversarialSim />} />
               <Route path="/playbook" element={<Playbook />} />
               <Route path="/assets" element={<AssetInventory />} />
+              <Route path="/watchlist" element={<CVEWatchlist />} />
             </Routes>
           </main>
         </div>
@@ -109,6 +111,7 @@ function Header() {
         <StatusDot label="SESSION CTX" port={8095} />
         <StatusDot label="PLAYBOOK" port={8096} />
         <StatusDot label="ASSETS" port={8097} />
+        <StatusDot label="WATCHLIST" port={8098} />
         <div style={{
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "10px",
@@ -186,6 +189,7 @@ function Sidebar() {
     { to: "/adversarial", icon: Shield, label: "ADVERSARIAL", sublabel: "Kill Chain Sim" },
     { to: "/playbook", icon: Play, label: "PLAYBOOK", sublabel: "Automated Workflows" },
     { to: "/assets", icon: Server, label: "ASSETS", sublabel: "Asset Inventory" },
+    { to: "/watchlist", icon: Bell, label: "WATCHLIST", sublabel: "CVE Monitoring" },
   ]
   return (
     <nav style={{
