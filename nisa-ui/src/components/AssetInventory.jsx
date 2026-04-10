@@ -30,8 +30,20 @@ export default function AssetInventory() {
   const [editData, setEditData] = useState({})
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState("all")
+  const [scores, setScores] = useState({})
 
-  useEffect(() => { fetchAssets(); fetchStats() }, [])
+  useEffect(() => { fetchAssets(); fetchStats(); fetchScores() }, [])
+
+  const fetchScores = async () => {
+    try {
+      const res = await api.get(`${ASSET_API}/assets/scores/all`)
+      const scoreMap = {}
+      for (const s of res.data.scores || []) {
+        scoreMap[s.asset_id] = s
+      }
+      setScores(scoreMap)
+    } catch(e) {}
+  }
 
   const fetchAssets = async () => {
     setLoading(true)
@@ -173,6 +185,24 @@ export default function AssetInventory() {
                 <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", marginTop: "3px" }}>
                   {asset.port_count} ports · {asset.vuln_count} vulns · {asset.scan_count} scans
                 </div>
+                {scores[asset.id] && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
+                    <span style={{
+                      fontFamily: "JetBrains Mono, monospace", fontSize: "10px", fontWeight: 700,
+                      color: riskColor(scores[asset.id].label?.toLowerCase())
+                    }}>{scores[asset.id].score}</span>
+                    <span style={{
+                      background: riskBg(scores[asset.id].label?.toLowerCase()),
+                      border: `1px solid ${riskColor(scores[asset.id].label?.toLowerCase())}`,
+                      borderRadius: "2px", padding: "0 4px",
+                      fontFamily: "JetBrains Mono, monospace", fontSize: "8px",
+                      color: riskColor(scores[asset.id].label?.toLowerCase())
+                    }}>Grade {scores[asset.id].grade}</span>
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: "var(--text-dim)" }}>
+                      {scores[asset.id].trend === "degrading" ? "▲" : scores[asset.id].trend === "improving" ? "▼" : "●"}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -207,6 +237,43 @@ export default function AssetInventory() {
                     <Stat label="LAST SEEN" value={new Date(detail.last_seen).toLocaleDateString()} />
                     <Stat label="SCAN COUNT" value={detail.scan_count} />
                   </div>
+                  {scores[detail.id] && (
+                    <div style={{ display: "flex", gap: "12px", marginTop: "8px", padding: "8px 12px", background: "var(--bg-primary)", borderRadius: "3px", border: "1px solid var(--border)" }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "24px", fontWeight: 700, color: riskColor(scores[detail.id].label?.toLowerCase()), lineHeight: 1 }}>{scores[detail.id].score}</div>
+                        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: "var(--text-dim)", marginTop: "2px" }}>RISK SCORE</div>
+                      </div>
+                      <div style={{ width: "1px", background: "var(--border)" }} />
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "24px", fontWeight: 700, color: riskColor(scores[detail.id].label?.toLowerCase()), lineHeight: 1 }}>
+                          {scores[detail.id].grade}
+                        </div>
+                        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: "var(--text-dim)", marginTop: "2px" }}>GRADE</div>
+                      </div>
+                      <div style={{ width: "1px", background: "var(--border)" }} />
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px", justifyContent: "center" }}>
+                        {[
+                          { label: "Vulnerability", value: scores[detail.id].breakdown?.vulnerability, max: 60 },
+                          { label: "Criticality", value: scores[detail.id].breakdown?.criticality, max: 25 },
+                          { label: "Threat Intel", value: scores[detail.id].breakdown?.threat_intel, max: 15 },
+                        ].map(b => (
+                          <div key={b.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ width: "80px", fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: "var(--text-dim)" }}>{b.label}</div>
+                            <div style={{ flex: 1, background: "var(--bg-secondary)", borderRadius: "2px", height: "5px" }}>
+                              <div style={{ width: `${(b.value/b.max)*100}%`, height: "100%", borderRadius: "2px", background: riskColor(scores[detail.id].label?.toLowerCase()), transition: "width 0.4s ease" }} />
+                            </div>
+                            <div style={{ width: "24px", textAlign: "right", fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)" }}>{b.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "20px", lineHeight: 1 }}>
+                          {scores[detail.id].trend === "degrading" ? "▲" : scores[detail.id].trend === "improving" ? "▼" : "●"}
+                        </div>
+                        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: "var(--text-dim)", marginTop: "2px", textTransform: "uppercase" }}>{scores[detail.id].trend}</div>
+                      </div>
+                    </div>
+                  )}
                   {detail.tags?.length > 0 && (
                     <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
                       {detail.tags.map(t => (
