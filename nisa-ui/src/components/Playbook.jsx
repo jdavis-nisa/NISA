@@ -287,7 +287,7 @@ function PlaybookViewer({ pb, onEdit, onDelete, onRun, running }) {
 
 function PlaybookEditor({ data, onChange, onSave, onCancel, creating }) {
   const addStep = () => {
-    const newStep = { id: uid(), name: "New Step", operation: "nmap_scan", params: { target: "127.0.0.1", scan_type: "quick" }, condition: "always" }
+    const newStep = { id: uid(), name: "New Step", operation: "nmap_scan", params: { target: "127.0.0.1", scan_type: "quick" }, condition: data.steps.length === 0 ? "always" : "on_finding" }
     onChange({ ...data, steps: [...data.steps, newStep] })
   }
 

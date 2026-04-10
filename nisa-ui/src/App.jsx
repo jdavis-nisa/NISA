@@ -16,6 +16,7 @@ import NetworkTopology from './components/NetworkTopology'
 import ThreatIntel from './components/ThreatIntel'
 import AdversarialSim from './components/AdversarialSim'
 import Playbook from './components/Playbook'
+import NisabaOrb from './components/NisabaOrb'
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
           </main>
         </div>
       </div>
+      <NisabaOrb />
     </HashRouter>
   )
 }
