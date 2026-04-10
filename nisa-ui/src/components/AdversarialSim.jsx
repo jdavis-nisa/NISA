@@ -31,6 +31,7 @@ export default function AdversarialSim() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState("")
   const [activeStep, setActiveStep] = useState(null)
+  const [activeTab, setActiveTab] = useState("simulation")
 
   useEffect(() => {
     api.get(`${ADV_API}/threat_actors`).then(r => setActors(r.data.actors)).catch(() => {})
@@ -83,6 +84,26 @@ export default function AdversarialSim() {
         No attacks are executed. Use only for systems you are authorized to assess.
       </div>
 
+      {/* Tab switcher */}
+      <div style={{ display: "flex", gap: "0", borderBottom: `1px solid ${BORDER}` }}>
+        {[
+          { key: "simulation", label: "KILL CHAIN SIMULATOR" },
+          { key: "coverage", label: "ATT&CK COVERAGE MATRIX" },
+        ].map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+            background: "transparent", border: "none",
+            borderBottom: activeTab === t.key ? `2px solid ${GOLD}` : "2px solid transparent",
+            color: activeTab === t.key ? GOLD : DIM,
+            padding: "8px 16px", cursor: "pointer",
+            fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "12px", letterSpacing: "0.15em"
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {activeTab === "coverage" && <CoverageMatrix lastResult={result} />}
+      {activeTab === "simulation" && (
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div>
@@ -160,6 +181,8 @@ export default function AdversarialSim() {
         borderRadius: "4px", padding: "10px" }}>{error}</div>}
 
       {result && <SimulationResults result={result} activeStep={activeStep} setActiveStep={setActiveStep} />}
+      </div>
+      )}
     </div>
   )
 }
@@ -378,6 +401,138 @@ function SimulationResults({ result, activeStep, setActiveStep }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+const TACTICS = [
+  { id: "TA0001", name: "Recon" },
+  { id: "TA0002", name: "Resource Dev" },
+  { id: "TA0003", name: "Initial Access" },
+  { id: "TA0004", name: "Execution" },
+  { id: "TA0005", name: "Persistence" },
+  { id: "TA0006", name: "Priv Escalation" },
+  { id: "TA0007", name: "Defense Evasion" },
+  { id: "TA0008", name: "Credential Access" },
+  { id: "TA0009", name: "Discovery" },
+  { id: "TA0010", name: "Lateral Movement" },
+  { id: "TA0011", name: "Collection" },
+  { id: "TA0040", name: "Impact" },
+  { id: "TA0042", name: "C2" },
+  { id: "TA0043", name: "Exfiltration" },
+]
+
+function CoverageMatrix({ lastResult }) {
+  const [coverage, setCoverage] = useState({})
+  const [selected, setSelected] = useState(null)
+
+  useEffect(() => {
+    if (!lastResult) return
+    const map = {}
+    const steps = lastResult.steps || []
+    for (const step of steps) {
+      const tacticId = step.mitre_tactic_id || ""
+      const detected = step.blue_team && step.blue_team.detection_method && step.blue_team.detection_method !== "Unknown"
+      const partial = step.blue_team && step.blue_team.gap_identified
+      const status = detected ? (partial ? "partial" : "detected") : "blind"
+      if (tacticId) map[tacticId] = { status, step }
+    }
+    setCoverage(map)
+  }, [lastResult])
+
+  const cellColor = (status) => ({
+    detected: "var(--success)",
+    partial: "#f59e0b",
+    blind: "var(--danger)",
+    untested: "var(--border)"
+  })[status] || "var(--border)"
+
+  const cellBg = (status) => ({
+    detected: "rgba(34,197,94,0.15)",
+    partial: "rgba(245,158,11,0.15)",
+    blind: "rgba(239,68,68,0.15)",
+    untested: "transparent"
+  })[status] || "transparent"
+
+  const detected = Object.values(coverage).filter(v => v.status === "detected").length
+  const partial = Object.values(coverage).filter(v => v.status === "partial").length
+  const blind = Object.values(coverage).filter(v => v.status === "blind").length
+  const total = Object.keys(coverage).length
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {!lastResult && (
+        <div style={{ background: BG2, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "24px", textAlign: "center", color: DIM, fontFamily: "JetBrains Mono, monospace", fontSize: "11px" }}>
+          Run a simulation first to populate the coverage matrix.
+        </div>
+      )}
+      {lastResult && (
+        <>
+          {/* Stats */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            {[
+              { label: "DETECTED", value: detected, color: "var(--success)" },
+              { label: "PARTIAL", value: partial, color: "#f59e0b" },
+              { label: "BLIND SPOTS", value: blind, color: "var(--danger)" },
+              { label: "TOTAL MAPPED", value: total, color: GOLD },
+            ].map(s => (
+              <div key={s.label} style={{ flex: 1, background: BG2, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "10px", textAlign: "center" }}>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "22px", fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: DIM, marginTop: "2px", letterSpacing: "0.1em" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Matrix */}
+          <div style={{ background: BG2, border: `1px solid ${BORDER}`, borderRadius: "4px", overflow: "hidden" }}>
+            <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: GOLD }}>ATT&CK TACTIC COVERAGE</span>
+            </div>
+            <div style={{ padding: "14px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {TACTICS.map(tactic => {
+                const cov = coverage[tactic.id]
+                const status = cov ? cov.status : "untested"
+                return (
+                  <div key={tactic.id} onClick={() => setSelected(cov ? { tactic, ...cov } : null)}
+                    style={{ width: "120px", padding: "10px 8px", borderRadius: "3px", cursor: cov ? "pointer" : "default", border: `1px solid ${cellColor(status)}`, background: cellBg(status), transition: "all 0.15s ease" }}>
+                    <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: cellColor(status), letterSpacing: "0.1em", marginBottom: "4px" }}>{tactic.id}</div>
+                    <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: "11px", color: cov ? "var(--text-primary)" : DIM }}>{tactic.name}</div>
+                    <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", color: cellColor(status), marginTop: "4px", textTransform: "uppercase" }}>{status}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          {/* Legend */}
+          <div style={{ display: "flex", gap: "16px", padding: "8px 0" }}>
+            {[
+              { status: "detected", label: "Detected" },
+              { status: "partial", label: "Partial" },
+              { status: "blind", label: "Blind Spot" },
+              { status: "untested", label: "Not Tested" },
+            ].map(l => (
+              <div key={l.status} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ width: "10px", height: "10px", borderRadius: "2px", background: cellColor(l.status), border: `1px solid ${cellColor(l.status)}` }} />
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: DIM }}>{l.label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Detail panel */}
+          {selected && (
+            <div style={{ background: BG2, border: `1px solid ${cellColor(selected.status)}`, borderRadius: "4px", padding: "14px 16px" }}>
+              <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "14px", letterSpacing: "0.1em", color: GOLD, marginBottom: "8px" }}>{selected.tactic.id} — {selected.tactic.name}</div>
+              {selected.step && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)" }}><span style={{ color: DIM }}>Action: </span>{selected.step.red_team?.attack_action || "N/A"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)" }}><span style={{ color: DIM }}>Detection: </span>{selected.step.blue_team?.detection_method || "None"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)" }}><span style={{ color: DIM }}>Log Source: </span>{selected.step.blue_team?.log_source || "N/A"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-secondary)" }}><span style={{ color: DIM }}>Response: </span>{selected.step.blue_team?.response_action || "N/A"}</div>
+                  {selected.step.blue_team?.gap_identified && <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "#f59e0b" }}><span style={{ color: DIM }}>Gap: </span>{selected.step.blue_team.gap_identified}</div>}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
