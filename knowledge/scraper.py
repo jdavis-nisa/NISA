@@ -1,9 +1,8 @@
 #!/usr/bin/env python3.11
 """
-NISA Knowledge Web Scraper v2.0
-Upgraded: 200 results per ArXiv query, PDF full-text extraction,
-10 new domains, deeper coverage across all existing domains.
-Maintains security and integrity - only verified public sources.
+NISA Knowledge Web Scraper v3.0
+Deep domain coverage - multiple sub-queries per topic, 200 results each.
+Goal: Nisaba as subject matter expert across all 33+ domains.
 """
 import os
 import time
@@ -17,514 +16,935 @@ from pathlib import Path
 
 SSD_BASE = "/Volumes/Share Drive/NISA/knowledge"
 SCRAPER_STATE = "/Users/joshuadavis/NISA/knowledge/scraper_state.json"
-DELAY = 2         # seconds between requests
-ARXIV_RESULTS = 200   # abstracts per query (was 50)
-MAX_CONTENT = 80000   # chars per file (was 50000)
+DELAY = 2
+AR = 200  # ArXiv results per query
+MAX_CONTENT = 80000
+PDF_PRIORITY_DOMAINS = {"radar_ew", "radar_ew_deep", "security", "quantum_advanced", "physics_advanced", "combat_medicine"}
 
-# High-value domains that get PDF full-text extraction
-PDF_PRIORITY_DOMAINS = {"radar_ew", "security", "quantum_advanced", "physics_advanced"}
+def A(name, query, pdf=False):
+    return {"name": name, "url": f"https://export.arxiv.org/api/query?search_query={query.replace(' ','+')}&max_results={AR}&sortBy=submittedDate", "type": "arxiv", "pdf": pdf}
 
-# ─── SOURCES ──────────────────────────────────────────────────────
+def T(name, url):
+    return {"name": name, "url": url, "type": "text"}
+
+def NVD(name, url):
+    return {"name": name, "url": url, "type": "nvd"}
+
+def MITRE(name, url):
+    return {"name": name, "url": url, "type": "mitre"}
+
 SOURCES = {
 
-    # ── SECURITY ──────────────────────────────────────────────────
-    "security": [
-        {"name": "NIST_NVD_CRITICAL", "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&cvssV3Severity=CRITICAL", "type": "nvd"},
-        {"name": "NIST_NVD_HIGH", "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&cvssV3Severity=HIGH", "type": "nvd"},
-        {"name": "NIST_NVD_2024", "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&pubStartDate=2024-01-01T00:00:00.000&pubEndDate=2024-12-31T23:59:59.999", "type": "nvd"},
-        {"name": "NIST_NVD_2023", "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&pubStartDate=2023-01-01T00:00:00.000&pubEndDate=2023-12-31T23:59:59.999", "type": "nvd"},
-        {"name": "MITRE_ATTACK_Enterprise", "url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json", "type": "mitre"},
-        {"name": "MITRE_ATTACK_Mobile", "url": "https://raw.githubusercontent.com/mitre/cti/master/mobile-attack/mobile-attack.json", "type": "mitre"},
-        {"name": "MITRE_ATTACK_ICS", "url": "https://raw.githubusercontent.com/mitre/cti/master/ics-attack/ics-attack.json", "type": "mitre"},
-        {"name": "OWASP_Top10_2021", "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/A00_2021_Introduction.md", "type": "text"},
-        {"name": "OWASP_Top10_API", "url": "https://raw.githubusercontent.com/OWASP/API-Security/master/editions/2023/en/0x00-header.md", "type": "text"},
-        {"name": "OWASP_Testing_Guide", "url": "https://raw.githubusercontent.com/OWASP/wstg/master/document/4-Web_Application_Security_Testing/README.md", "type": "text"},
-        {"name": "NIST_CSF_2", "url": "https://raw.githubusercontent.com/usnistgov/NIST-Cybersecurity-Framework/main/README.md", "type": "text"},
-        {"name": "NIST_800_53", "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/markdown/SP800-53_Rev5_catalog.md", "type": "text"},
-        {"name": "ArXiv_Malware_Detection", "url": f"https://export.arxiv.org/api/query?search_query=malware+detection+machine+learning&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_APT_Campaigns", "url": f"https://export.arxiv.org/api/query?search_query=advanced+persistent+threat+APT+campaign+attribution&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Ransomware", "url": f"https://export.arxiv.org/api/query?search_query=ransomware+attack+analysis+defense+recovery&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Intrusion_Detection", "url": f"https://export.arxiv.org/api/query?search_query=intrusion+detection+system+neural+network&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Vulnerability_Research", "url": f"https://export.arxiv.org/api/query?search_query=vulnerability+assessment+exploit+CVE&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_ZeroTrust", "url": f"https://export.arxiv.org/api/query?search_query=zero+trust+security+architecture+NIST&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_AI_Security", "url": f"https://export.arxiv.org/api/query?search_query=adversarial+machine+learning+security+attack&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Network_Defense", "url": f"https://export.arxiv.org/api/query?search_query=network+defense+threat+detection+SOC&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Phishing", "url": f"https://export.arxiv.org/api/query?search_query=phishing+social+engineering+spear+phishing&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cryptography", "url": f"https://export.arxiv.org/api/query?search_query=cryptography+encryption+post+quantum&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SIEM_Analytics", "url": f"https://export.arxiv.org/api/query?search_query=SIEM+security+analytics+log+analysis+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Threat_Intel", "url": f"https://export.arxiv.org/api/query?search_query=cyber+threat+intelligence+STIX+TAXII&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cloud_Security", "url": f"https://export.arxiv.org/api/query?search_query=cloud+security+misconfiguration+AWS+Azure&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_ICS_SCADA", "url": f"https://export.arxiv.org/api/query?search_query=ICS+SCADA+industrial+control+security+Stuxnet&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Supply_Chain", "url": f"https://export.arxiv.org/api/query?search_query=supply+chain+attack+software+dependency+SolarWinds&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Active_Directory", "url": f"https://export.arxiv.org/api/query?search_query=Active+Directory+Kerberos+attack+lateral+movement&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Web_App_Security", "url": f"https://export.arxiv.org/api/query?search_query=web+application+security+SQL+injection+XSS+CSRF&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Forensics_IR", "url": f"https://export.arxiv.org/api/query?search_query=digital+forensics+incident+response+DFIR&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Red_Team", "url": f"https://export.arxiv.org/api/query?search_query=red+team+penetration+testing+offensive+security&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "PayloadsAllTheThings", "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/README.md", "type": "text"},
-        {"name": "HackTricks_Linux_Privesc", "url": "https://raw.githubusercontent.com/carlospolop/hacktricks/master/linux-hardening/privilege-escalation/README.md", "type": "text"},
-        {"name": "HackTricks_Windows_Privesc", "url": "https://raw.githubusercontent.com/carlospolop/hacktricks/master/windows-hardening/windows-local-privilege-escalation/README.md", "type": "text"},
-        {"name": "HackTricks_Active_Directory", "url": "https://raw.githubusercontent.com/carlospolop/hacktricks/master/windows-hardening/active-directory-methodology/README.md", "type": "text"},
-        {"name": "GTFOBins", "url": "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/README.md", "type": "text"},
-        {"name": "OWASP_WSTG", "url": "https://raw.githubusercontent.com/OWASP/wstg/master/document/README.md", "type": "text"},
-        {"name": "PortSwigger_SQLi", "url": "https://portswigger.net/web-security/sql-injection", "type": "text"},
-        {"name": "PortSwigger_XSS", "url": "https://portswigger.net/web-security/cross-site-scripting", "type": "text"},
-        {"name": "PortSwigger_SSRF", "url": "https://portswigger.net/web-security/ssrf", "type": "text"},
-        {"name": "PortSwigger_XXE", "url": "https://portswigger.net/web-security/xxe", "type": "text"},
-        {"name": "PortSwigger_Auth", "url": "https://portswigger.net/web-security/authentication", "type": "text"},
-        {"name": "Impacket_Docs", "url": "https://raw.githubusercontent.com/fortra/impacket/master/README.md", "type": "text"},
-        {"name": "Scapy_Docs", "url": "https://raw.githubusercontent.com/secdev/scapy/master/README.rst", "type": "text"},
+    # ── MATHEMATICS ───────────────────────────────────────────────
+    "mathematics": [
+        # Numerical Analysis
+        A("Num_Analysis_Algorithms", "numerical analysis algorithms approximation computation"),
+        A("Num_Matrix_Inversion", "matrix inversion decomposition numerical linear algebra"),
+        A("Num_Integration_Methods", "numerical integration quadrature Gaussian methods"),
+        A("Num_Root_Finding", "root finding Newton Raphson bisection numerical methods"),
+        A("Num_Interpolation", "interpolation spline polynomial approximation numerical"),
+        # Differential Equations
+        A("ODE_Theory", "ordinary differential equations solutions existence uniqueness"),
+        A("PDE_Methods", "partial differential equations boundary value problems finite element"),
+        A("Fluid_Dynamics_Math", "fluid dynamics Navier Stokes mathematical modeling equations"),
+        A("Population_Dynamics", "population dynamics mathematical biology differential equations"),
+        A("Chaos_Dynamical", "chaos theory dynamical systems bifurcation attractor"),
+        # Mathematical Modeling
+        A("Math_Modeling_Pandemic", "mathematical modeling epidemic pandemic SIR SEIR"),
+        A("Math_Climate_Models", "climate mathematical modeling simulation differential equations"),
+        A("Math_Finance_Models", "mathematical finance stochastic differential equations Black Scholes"),
+        A("Math_Physics_Models", "mathematical physics modeling quantum classical mechanics"),
+        A("Agent_Based_Models", "agent based modeling simulation complex systems"),
+        # Optimization
+        A("Optimization_Theory", "optimization theory convex linear programming algorithms"),
+        A("Gradient_Descent", "gradient descent stochastic optimization machine learning convergence"),
+        A("Integer_Programming", "integer programming combinatorial optimization NP hard"),
+        A("Multi_Objective_Opt", "multi objective optimization Pareto front evolutionary"),
+        A("Logistics_Optimization", "logistics supply chain optimization operations research"),
+        # Probability and Statistics
+        A("Probability_Theory", "probability theory measure theoretic foundations"),
+        A("Statistical_Inference", "statistical inference hypothesis testing confidence intervals"),
+        A("Bayesian_Statistics", "Bayesian statistics inference posterior prior"),
+        A("Stochastic_Processes", "stochastic processes Markov chain Brownian motion"),
+        A("Risk_Analysis_Stats", "risk analysis statistics actuarial quality control"),
+        # Core Mathematics
+        A("Linear_Algebra_Deep", "linear algebra eigenvalue eigenvector SVD matrix applications"),
+        A("Fourier_Analysis", "Fourier analysis transform signal wavelet applications"),
+        A("Graph_Theory", "graph theory network algorithms combinatorics"),
+        A("Information_Theory", "information theory Shannon entropy channel capacity"),
+        A("Number_Theory", "cat:math.NT"),
+        A("Abstract_Algebra", "cat:math.RA"),
+        A("Topology_Deep", "cat:math.AT"),
+        A("Real_Analysis", "real analysis measure theory Lebesgue integration"),
+        A("Complex_Analysis", "complex analysis holomorphic functions Riemann"),
+        T("Euclid_Elements", "https://www.gutenberg.org/cache/epub/21076/pg21076.txt"),
     ],
 
-    # ── SECURITY HISTORICAL ──────────────────────────────────────
-    "security_historical": [
-        {"name": "ArXiv_Stuxnet_Analysis", "url": f"https://export.arxiv.org/api/query?search_query=Stuxnet+worm+ICS+SCADA+Iran+nuclear&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SolarWinds", "url": f"https://export.arxiv.org/api/query?search_query=SolarWinds+Sunburst+supply+chain+attack+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_WannaCry", "url": f"https://export.arxiv.org/api/query?search_query=WannaCry+ransomware+EternalBlue+NHS+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_NotPetya", "url": f"https://export.arxiv.org/api/query?search_query=NotPetya+cyberattack+Ukraine+Maersk+wiper&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Colonial_Pipeline", "url": f"https://export.arxiv.org/api/query?search_query=Colonial+Pipeline+ransomware+DarkSide+critical+infrastructure&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Mirai_Botnet", "url": f"https://export.arxiv.org/api/query?search_query=Mirai+botnet+IoT+DDoS+Dyn+DNS&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Equifax_Breach", "url": f"https://export.arxiv.org/api/query?search_query=Equifax+data+breach+Apache+Struts+PII&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Target_Breach", "url": f"https://export.arxiv.org/api/query?search_query=Target+breach+POS+malware+retail+credit+card&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Log4Shell_Analysis", "url": f"https://export.arxiv.org/api/query?search_query=Log4Shell+Log4j+CVE-2021-44228+analysis+patch&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_MOVEit_Breach", "url": f"https://export.arxiv.org/api/query?search_query=MOVEit+Cl0p+ransomware+file+transfer+breach&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Volt_Typhoon", "url": f"https://export.arxiv.org/api/query?search_query=Volt+Typhoon+China+critical+infrastructure+living+off+land&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Midnight_Blizzard", "url": f"https://export.arxiv.org/api/query?search_query=Midnight+Blizzard+APT29+Microsoft+email+hack&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Nation_State_Attacks", "url": f"https://export.arxiv.org/api/query?search_query=nation+state+cyberattack+attribution+espionage&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_APT28_Fancy_Bear", "url": f"https://export.arxiv.org/api/query?search_query=APT28+Fancy+Bear+GRU+Russia+campaign&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Lazarus_DPRK", "url": f"https://export.arxiv.org/api/query?search_query=Lazarus+DPRK+North+Korea+cryptocurrency+theft&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Timeline_Major_Breaches", "url": f"https://export.arxiv.org/api/query?search_query=major+data+breach+timeline+history+cybersecurity&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cyber_Warfare_History", "url": f"https://export.arxiv.org/api/query?search_query=cyber+warfare+history+Estonia+Georgia+Ukraine&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Zero_Day_History", "url": f"https://export.arxiv.org/api/query?search_query=zero+day+exploit+history+Pwn2Own+Zerodium&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── SECURITY OFFENSIVE ────────────────────────────────────────
-    "security_offensive": [
-        {"name": "ArXiv_Exploit_Development", "url": f"https://export.arxiv.org/api/query?search_query=exploit+development+buffer+overflow+ROP+chain&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Living_Off_Land", "url": f"https://export.arxiv.org/api/query?search_query=living+off+the+land+LOLBAS+fileless+malware&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_C2_Frameworks", "url": f"https://export.arxiv.org/api/query?search_query=command+control+C2+framework+Cobalt+Strike+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Kerberoasting", "url": f"https://export.arxiv.org/api/query?search_query=Kerberoasting+Pass+the+Hash+Active+Directory+attack&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Lateral_Movement", "url": f"https://export.arxiv.org/api/query?search_query=lateral+movement+SMB+WMI+PsExec+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Privilege_Escalation", "url": f"https://export.arxiv.org/api/query?search_query=privilege+escalation+Windows+Linux+technique&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Persistence_Techniques", "url": f"https://export.arxiv.org/api/query?search_query=persistence+mechanisms+registry+scheduled+task+backdoor&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Credential_Dumping", "url": f"https://export.arxiv.org/api/query?search_query=credential+dumping+Mimikatz+LSASS+NTLM+hash&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Defense_Evasion", "url": f"https://export.arxiv.org/api/query?search_query=defense+evasion+AV+bypass+obfuscation+AMSI&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Wireless_Attacks", "url": f"https://export.arxiv.org/api/query?search_query=wireless+attack+WiFi+WPA2+PMKID+evil+twin&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Social_Engineering", "url": f"https://export.arxiv.org/api/query?search_query=social+engineering+vishing+pretexting+BEC&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Physical_Security", "url": f"https://export.arxiv.org/api/query?search_query=physical+security+access+control+RFID+bypass&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_AI_Attacks", "url": f"https://export.arxiv.org/api/query?search_query=AI+LLM+prompt+injection+jailbreak+model+attack&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_BloodHound_Methodology", "url": f"https://export.arxiv.org/api/query?search_query=BloodHound+AD+attack+path+graph+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Exfiltration", "url": f"https://export.arxiv.org/api/query?search_query=data+exfiltration+covert+channel+DNS+tunneling&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── SECURITY DEFENSIVE ────────────────────────────────────────
-    "security_defensive": [
-        {"name": "ArXiv_Detection_Engineering", "url": f"https://export.arxiv.org/api/query?search_query=detection+engineering+SIEM+rule+sigma&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Threat_Hunting", "url": f"https://export.arxiv.org/api/query?search_query=threat+hunting+hypothesis+driven+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SOC_Operations", "url": f"https://export.arxiv.org/api/query?search_query=SOC+security+operations+center+analyst+playbook&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Incident_Response", "url": f"https://export.arxiv.org/api/query?search_query=incident+response+containment+eradication+recovery&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_EDR_XDR", "url": f"https://export.arxiv.org/api/query?search_query=EDR+XDR+endpoint+detection+response+telemetry&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Blue_Team", "url": f"https://export.arxiv.org/api/query?search_query=blue+team+defensive+security+hardening&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Deception_Honeypot", "url": f"https://export.arxiv.org/api/query?search_query=honeypot+deception+technology+canary+token&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Vulnerability_Management", "url": f"https://export.arxiv.org/api/query?search_query=vulnerability+management+patch+prioritization+CVSS&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Security_Metrics", "url": f"https://export.arxiv.org/api/query?search_query=security+metrics+KPI+measurement+risk+quantification&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "NIST_IR_Guide", "url": "https://raw.githubusercontent.com/usnistgov/SP800-61r3/main/README.md", "type": "text"},
-        {"name": "Sigma_Rules", "url": "https://raw.githubusercontent.com/SigmaHQ/sigma/master/README.md", "type": "text"},
-        {"name": "MITRE_D3FEND", "url": f"https://export.arxiv.org/api/query?search_query=MITRE+D3FEND+defensive+countermeasure+framework&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Threat_Modeling", "url": f"https://export.arxiv.org/api/query?search_query=threat+modeling+STRIDE+PASTA+architecture+security&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Purple_Team", "url": f"https://export.arxiv.org/api/query?search_query=purple+team+exercise+red+blue+collaboration&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_MITRE_ATT_Coverage", "url": f"https://export.arxiv.org/api/query?search_query=MITRE+ATT+CK+detection+coverage+gap+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── RADAR / EW ────────────────────────────────────────────────
-    "radar_ew": [
-        {"name": "DTIC_Radar_Signal", "url": "https://apps.dtic.mil/sti/api/search?q=radar+signal+processing&fields=title,abstract&rows=50", "type": "dtic"},
-        {"name": "NASA_Radar_Papers", "url": "https://ntrs.nasa.gov/api/citations/search?q=radar&rows=30", "type": "nasa"},
-        {"name": "ArXiv_Radar_ML", "url": f"https://export.arxiv.org/api/query?search_query=radar+machine+learning+target+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Signal_Processing", "url": f"https://export.arxiv.org/api/query?search_query=cat:eess.SP&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Phased_Array", "url": f"https://export.arxiv.org/api/query?search_query=phased+array+antenna+beamforming+digital&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_SAR_Imaging", "url": f"https://export.arxiv.org/api/query?search_query=synthetic+aperture+radar+SAR+imaging&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_LPI_Radar", "url": f"https://export.arxiv.org/api/query?search_query=LPI+radar+low+probability+intercept+waveform&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_EW_Jamming", "url": f"https://export.arxiv.org/api/query?search_query=electronic+warfare+jamming+ECM+DRFM&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_FMCW_Radar", "url": f"https://export.arxiv.org/api/query?search_query=FMCW+radar+automotive+range+doppler&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Radar_Waveform_Design", "url": f"https://export.arxiv.org/api/query?search_query=radar+waveform+design+ambiguity+function+LFM&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Polyphase_Codes", "url": f"https://export.arxiv.org/api/query?search_query=polyphase+codes+Frank+P1+P2+P4+radar+waveform&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Frequency_Hopping", "url": f"https://export.arxiv.org/api/query?search_query=frequency+hopping+spread+spectrum+radar+LPI&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Doppler_Processing", "url": f"https://export.arxiv.org/api/query?search_query=Doppler+processing+MTI+MTD+moving+target&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Radar_Cross_Section", "url": f"https://export.arxiv.org/api/query?search_query=radar+cross+section+RCS+stealth+signature&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_ESM_ELINT", "url": f"https://export.arxiv.org/api/query?search_query=electronic+support+measures+ELINT+signal+intercept&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Cognitive_Radar", "url": f"https://export.arxiv.org/api/query?search_query=cognitive+radar+adaptive+waveform+environment&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_MIMO_Radar", "url": f"https://export.arxiv.org/api/query?search_query=MIMO+radar+multiple+input+output+waveform&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Radar_Clutter", "url": f"https://export.arxiv.org/api/query?search_query=radar+clutter+suppression+CFAR+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_EW_Defense", "url": f"https://export.arxiv.org/api/query?search_query=electronic+warfare+defense+counter+countermeasure&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Radar_Deep_Learning", "url": f"https://export.arxiv.org/api/query?search_query=radar+deep+learning+classification+recognition&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_EOB", "url": f"https://export.arxiv.org/api/query?search_query=electronic+order+of+battle+emitter+identification&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_SDR_Waveform", "url": f"https://export.arxiv.org/api/query?search_query=software+defined+radio+SDR+waveform+GNU+Radio&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Pulse_Compression", "url": f"https://export.arxiv.org/api/query?search_query=pulse+compression+chirp+Barker+matched+filter&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Spectrum_Sensing", "url": f"https://export.arxiv.org/api/query?search_query=spectrum+sensing+cognitive+radio+interference&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── BUSINESS / FEDERAL CONTRACTS ─────────────────────────────
-    "business_contracts": [
-        {"name": "ArXiv_Federal_Contracting", "url": f"https://export.arxiv.org/api/query?search_query=federal+government+contracting+procurement+defense&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Proposal_Writing", "url": f"https://export.arxiv.org/api/query?search_query=government+proposal+writing+RFP+technical+volume&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_IDIQ_Contracts", "url": f"https://export.arxiv.org/api/query?search_query=IDIQ+GWAC+indefinite+delivery+contract+government&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Defense_Acquisition", "url": f"https://export.arxiv.org/api/query?search_query=defense+acquisition+DoD+program+management+DoDI&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SBIR_STTR", "url": f"https://export.arxiv.org/api/query?search_query=SBIR+STTR+small+business+innovation+research+DoD&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SOW_PWS", "url": f"https://export.arxiv.org/api/query?search_query=statement+of+work+performance+work+specification&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Contract_Negotiation", "url": f"https://export.arxiv.org/api/query?search_query=contract+negotiation+terms+conditions+government&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Business_Development", "url": f"https://export.arxiv.org/api/query?search_query=business+development+capture+management+BD+pipeline&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Technical_Reports", "url": f"https://export.arxiv.org/api/query?search_query=technical+report+white+paper+capability+brief&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Startup_Entrepreneurship", "url": f"https://export.arxiv.org/api/query?search_query=startup+entrepreneurship+innovation+commercialization&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_IP_Patents", "url": f"https://export.arxiv.org/api/query?search_query=intellectual+property+patent+strategy+technology+transfer&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Project_Management", "url": f"https://export.arxiv.org/api/query?search_query=project+management+agile+scrum+earned+value&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "FAR_Overview", "url": "https://raw.githubusercontent.com/GSA/GSA-Acquisition-FAR/main/README.md", "type": "text"},
-        {"name": "ArXiv_CUI_Handling", "url": f"https://export.arxiv.org/api/query?search_query=controlled+unclassified+information+CUI+handling+NIST&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_ITAR_EAR", "url": f"https://export.arxiv.org/api/query?search_query=ITAR+EAR+export+control+technology+defense&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Pricing_Strategy", "url": f"https://export.arxiv.org/api/query?search_query=government+contract+pricing+strategy+cost+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── DEFENSE / COMPLIANCE ─────────────────────────────────────
-    "defense_compliance": [
-        {"name": "ArXiv_NIST_800_171", "url": f"https://export.arxiv.org/api/query?search_query=NIST+800-171+CUI+defense+contractor+compliance&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_CMMC", "url": f"https://export.arxiv.org/api/query?search_query=CMMC+cybersecurity+maturity+model+certification+DoD&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_FedRAMP", "url": f"https://export.arxiv.org/api/query?search_query=FedRAMP+federal+cloud+authorization+ATO&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_RMF", "url": f"https://export.arxiv.org/api/query?search_query=Risk+Management+Framework+RMF+ATO+authorization&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_FISMA", "url": f"https://export.arxiv.org/api/query?search_query=FISMA+federal+information+security+management+compliance&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_IL_Levels", "url": f"https://export.arxiv.org/api/query?search_query=DoD+impact+level+IL2+IL4+IL5+cloud+classification&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Security_Clearance", "url": f"https://export.arxiv.org/api/query?search_query=security+clearance+SF-86+adjudication+background+investigation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_PII_Privacy", "url": f"https://export.arxiv.org/api/query?search_query=PII+privacy+data+protection+GDPR+compliance&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SOC2_ISO27001", "url": f"https://export.arxiv.org/api/query?search_query=SOC2+ISO+27001+security+audit+compliance+framework&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Post_Quantum_Compliance", "url": f"https://export.arxiv.org/api/query?search_query=post+quantum+cryptography+NIST+FIPS+204+compliance+migration&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_AI_Governance", "url": f"https://export.arxiv.org/api/query?search_query=AI+governance+risk+management+framework+NIST+AI+RMF&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Insider_Threat_Program", "url": f"https://export.arxiv.org/api/query?search_query=insider+threat+program+detection+monitoring&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── LINUX / TERMINAL COMMANDS ─────────────────────────────────
-    "linux_commands": [
-        {"name": "GNU_Bash_Manual", "url": "https://www.gnu.org/software/bash/manual/bash.html", "type": "text"},
-        {"name": "Linux_Man_Pages_Core", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/linux/README.md", "type": "text"},
-        {"name": "TLDR_Linux", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/grep.md", "type": "text"},
-        {"name": "GTFOBins_Full", "url": "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/README.md", "type": "text"},
-        {"name": "Linux_Command_101", "url": "https://raw.githubusercontent.com/nicowillis/linux-commands/main/README.md", "type": "text"},
-        {"name": "ArXiv_Linux_Admin", "url": f"https://export.arxiv.org/api/query?search_query=Linux+system+administration+command+line+tutorial&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Bash_Scripting", "url": f"https://export.arxiv.org/api/query?search_query=bash+shell+scripting+automation+linux+command&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Network_Commands", "url": f"https://export.arxiv.org/api/query?search_query=network+diagnostic+commands+tcpdump+netstat+ss+linux&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Grep_Sed_Awk", "url": f"https://export.arxiv.org/api/query?search_query=grep+sed+awk+regular+expressions+text+processing+linux&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Systemd", "url": f"https://export.arxiv.org/api/query?search_query=systemd+service+management+Linux+init+system&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Docker_Commands", "url": f"https://export.arxiv.org/api/query?search_query=Docker+container+command+line+management&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Git_Commands", "url": f"https://export.arxiv.org/api/query?search_query=Git+version+control+command+workflow+branch&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_SSH_OpenSSL", "url": f"https://export.arxiv.org/api/query?search_query=SSH+OpenSSL+TLS+certificate+command+line&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Python_CLI", "url": f"https://export.arxiv.org/api/query?search_query=Python+command+line+automation+script+argparse&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Terminal_Productivity", "url": f"https://export.arxiv.org/api/query?search_query=terminal+productivity+vim+tmux+zsh+workflow&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Forensics_Commands", "url": f"https://export.arxiv.org/api/query?search_query=forensics+command+line+dd+strings+file+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Package_Management", "url": f"https://export.arxiv.org/api/query?search_query=Linux+package+manager+apt+yum+brew+pip&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "TLDR_Nmap", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/nmap.md", "type": "text"},
-        {"name": "TLDR_Curl", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/curl.md", "type": "text"},
-        {"name": "TLDR_Find", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/find.md", "type": "text"},
-        {"name": "TLDR_SSH", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/ssh.md", "type": "text"},
-        {"name": "TLDR_Tcpdump", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/tcpdump.md", "type": "text"},
-        {"name": "TLDR_Awk", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/awk.md", "type": "text"},
-        {"name": "TLDR_Sed", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/sed.md", "type": "text"},
-        {"name": "TLDR_Grep", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/grep.md", "type": "text"},
-        {"name": "TLDR_Ps", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/ps.md", "type": "text"},
-        {"name": "TLDR_Netstat", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/netstat.md", "type": "text"},
-        {"name": "TLDR_Git", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/git.md", "type": "text"},
-        {"name": "TLDR_Docker", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/docker.md", "type": "text"},
-        {"name": "TLDR_Python", "url": "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/python.md", "type": "text"},
-    ],
-
-    # ── COMBAT MEDICINE / TCCC ────────────────────────────────────
-    "combat_medicine": [
-        {"name": "ArXiv_TCCC", "url": f"https://export.arxiv.org/api/query?search_query=tactical+combat+casualty+care+TCCC+prehospital&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Hemorrhage_Control", "url": f"https://export.arxiv.org/api/query?search_query=hemorrhage+control+tourniquet+hemostatic+agent+trauma&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Airway_Management", "url": f"https://export.arxiv.org/api/query?search_query=airway+management+intubation+cricothyrotomy+field&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_MARCH_Protocol", "url": f"https://export.arxiv.org/api/query?search_query=MARCH+PAWS+protocol+combat+trauma+military+medicine&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Blast_Injury", "url": f"https://export.arxiv.org/api/query?search_query=blast+injury+IED+TBI+trauma+military&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Combat_Medic", "url": f"https://export.arxiv.org/api/query?search_query=combat+medic+68W+field+medicine+Afghanistan+Iraq&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Wound_Ballistics", "url": f"https://export.arxiv.org/api/query?search_query=wound+ballistics+gunshot+injury+treatment&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_MEDEVAC", "url": f"https://export.arxiv.org/api/query?search_query=MEDEVAC+medical+evacuation+9-line+casualty+transport&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_PTSD_Veterans", "url": f"https://export.arxiv.org/api/query?search_query=PTSD+veterans+combat+trauma+treatment+VA&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_TBI_Veterans", "url": f"https://export.arxiv.org/api/query?search_query=traumatic+brain+injury+TBI+veterans+blast+cognitive&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Trauma_Surgery", "url": f"https://export.arxiv.org/api/query?search_query=damage+control+surgery+trauma+resuscitation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Military_Pharmacology", "url": f"https://export.arxiv.org/api/query?search_query=military+pharmacology+ketamine+tranexamic+acid+morphine&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Point_of_Care", "url": f"https://export.arxiv.org/api/query?search_query=point+of+care+diagnostics+field+hospital+austere&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "Gray_Anatomy", "url": "https://www.gutenberg.org/cache/epub/39722/pg39722.txt", "type": "text"},
-        {"name": "US_Army_Survival_Manual", "url": "https://www.gutenberg.org/files/17007/17007-0.txt", "type": "text"},
-    ],
-
-    # ── EXISTING DOMAINS (enhanced) ───────────────────────────────
-    "radar_ew_deep": [
-        {"name": "ArXiv_Barker_Codes", "url": f"https://export.arxiv.org/api/query?search_query=Barker+code+sidelobe+pulse+compression+binary&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Noise_Radar", "url": f"https://export.arxiv.org/api/query?search_query=noise+radar+random+waveform+LPI+covert&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Stepped_Frequency", "url": f"https://export.arxiv.org/api/query?search_query=stepped+frequency+radar+waveform+high+resolution&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_OFDM_Radar", "url": f"https://export.arxiv.org/api/query?search_query=OFDM+radar+waveform+orthogonal+frequency+division&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_JSR_Calculations", "url": f"https://export.arxiv.org/api/query?search_query=jamming+signal+ratio+JSR+radar+performance+equation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Intercept_Receiver", "url": f"https://export.arxiv.org/api/query?search_query=intercept+receiver+ESM+threat+radar+warning&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Chaff_Flare", "url": f"https://export.arxiv.org/api/query?search_query=chaff+flare+countermeasure+missile+seeker&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Airborne_Radar", "url": f"https://export.arxiv.org/api/query?search_query=airborne+radar+AESA+fighter+aircraft+radar+system&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Ground_Penetrating", "url": f"https://export.arxiv.org/api/query?search_query=ground+penetrating+radar+GPR+subsurface+detection&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Over_Horizon_Radar", "url": f"https://export.arxiv.org/api/query?search_query=over+horizon+radar+OTH+HF+skywave&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-    ],
-
-    # ── PHILOSOPHY ────────────────────────────────────────────────
-    "philosophy": [
-        {"name": "Plato_Republic", "url": "https://www.gutenberg.org/files/1497/1497-0.txt", "type": "text"},
-        {"name": "Plato_Dialogues", "url": "https://www.gutenberg.org/cache/epub/1656/pg1656.txt", "type": "text"},
-        {"name": "Aristotle_Ethics", "url": "https://www.gutenberg.org/files/8438/8438-0.txt", "type": "text"},
-        {"name": "Aristotle_Politics", "url": "https://www.gutenberg.org/cache/epub/6762/pg6762.txt", "type": "text"},
-        {"name": "Nietzsche_Zarathustra", "url": "https://www.gutenberg.org/files/1998/1998-0.txt", "type": "text"},
-        {"name": "Nietzsche_Beyond_Good_Evil", "url": "https://www.gutenberg.org/cache/epub/4363/pg4363.txt", "type": "text"},
-        {"name": "Marcus_Aurelius_Meditations", "url": "https://www.gutenberg.org/cache/epub/2680/pg2680.txt", "type": "text"},
-        {"name": "Seneca_Letters", "url": "https://www.gutenberg.org/cache/epub/1464/pg1464.txt", "type": "text"},
-        {"name": "Epictetus_Discourses", "url": "https://www.gutenberg.org/cache/epub/4135/pg4135.txt", "type": "text"},
-        {"name": "Descartes_Meditations", "url": "https://www.gutenberg.org/files/59/59-0.txt", "type": "text"},
-        {"name": "Kant_Critique_Pure_Reason", "url": "https://www.gutenberg.org/cache/epub/4280/pg4280.txt", "type": "text"},
-        {"name": "Locke_Human_Understanding", "url": "https://www.gutenberg.org/cache/epub/10615/pg10615.txt", "type": "text"},
-        {"name": "Hume_Enquiry", "url": "https://www.gutenberg.org/cache/epub/9662/pg9662.txt", "type": "text"},
-        {"name": "Spinoza_Ethics", "url": "https://www.gutenberg.org/cache/epub/3800/pg3800.txt", "type": "text"},
-        {"name": "Schopenhauer_World_Will", "url": "https://www.gutenberg.org/cache/epub/38427/pg38427.txt", "type": "text"},
-        {"name": "Kierkegaard_Fear_Trembling", "url": "https://www.gutenberg.org/cache/epub/34888/pg34888.txt", "type": "text"},
-        {"name": "ArXiv_Philosophy_Mind", "url": f"https://export.arxiv.org/api/query?search_query=philosophy+of+mind+consciousness+qualia&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Ethics_AI", "url": f"https://export.arxiv.org/api/query?search_query=AI+ethics+moral+philosophy+autonomous+systems&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Philosophy_Science", "url": f"https://export.arxiv.org/api/query?search_query=philosophy+of+science+epistemology+Kuhn+paradigm&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Existentialism", "url": f"https://export.arxiv.org/api/query?search_query=existentialism+Sartre+Camus+Heidegger+being&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Stoicism", "url": f"https://export.arxiv.org/api/query?search_query=Stoicism+Stoic+philosophy+virtue+reason&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── SPIRITUALITY ADVANCED ─────────────────────────────────────
-    "spiritual_advanced": [
-        {"name": "CIA_Gateway_Experience", "url": "https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5", "type": "text"},
-        {"name": "Bhagavad_Gita", "url": "https://www.gutenberg.org/cache/epub/2388/pg2388.txt", "type": "text"},
-        {"name": "Dhammapada", "url": "https://www.gutenberg.org/cache/epub/2017/pg2017.txt", "type": "text"},
-        {"name": "Tao_Te_Ching", "url": "https://www.gutenberg.org/cache/epub/216/pg216.txt", "type": "text"},
-        {"name": "Upanishads", "url": "https://www.gutenberg.org/cache/epub/68171/pg68171.txt", "type": "text"},
-        {"name": "Quran_English", "url": "https://www.gutenberg.org/cache/epub/2800/pg2800.txt", "type": "text"},
-        {"name": "Bible_KJV", "url": "https://www.gutenberg.org/cache/epub/10/pg10.txt", "type": "text"},
-        {"name": "ArXiv_Consciousness_NCC", "url": f"https://export.arxiv.org/api/query?search_query=consciousness+neural+correlates+NCC+awareness&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Gateway_Monroe", "url": f"https://export.arxiv.org/api/query?search_query=Monroe+Institute+hemi-sync+binaural+consciousness&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_OBE_Research", "url": f"https://export.arxiv.org/api/query?search_query=out+of+body+experience+OBE+sleep+paralysis+autoscopy&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Remote_Viewing_CIA", "url": f"https://export.arxiv.org/api/query?search_query=remote+viewing+Stargate+psi+parapsychology&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Lucid_Dream_WILD", "url": f"https://export.arxiv.org/api/query?search_query=lucid+dreaming+WILD+MILD+technique+REM+induction&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Meditation_Neuroscience", "url": f"https://export.arxiv.org/api/query?search_query=meditation+neuroscience+EEG+alpha+theta+gamma&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_UAP_Scientific", "url": f"https://export.arxiv.org/api/query?search_query=UAP+UFO+unexplained+aerial+phenomena+scientific&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_NDE_Consciousness", "url": f"https://export.arxiv.org/api/query?search_query=near+death+experience+NDE+consciousness+afterlife&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Psychedelics_Mystical", "url": f"https://export.arxiv.org/api/query?search_query=psilocybin+DMT+mystical+experience+ego+dissolution&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Indigenous_Shamanism", "url": f"https://export.arxiv.org/api/query?search_query=shamanism+indigenous+ceremony+vision+quest&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Breathwork_Pranayama", "url": f"https://export.arxiv.org/api/query?search_query=pranayama+Wim+Hof+holotropic+breathwork+altered+state&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_World_Religions", "url": f"https://export.arxiv.org/api/query?search_query=comparative+religion+world+traditions+mysticism&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Guided_Visualization", "url": f"https://export.arxiv.org/api/query?search_query=guided+imagery+visualization+meditation+script+relaxation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Quantum_Consciousness", "url": f"https://export.arxiv.org/api/query?search_query=quantum+consciousness+Penrose+Orch+OR+microtubule&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-    ],
-
-    # ── PHYSICS ADVANCED ─────────────────────────────────────────
+    # ── PHYSICS ───────────────────────────────────────────────────
     "physics_advanced": [
-        {"name": "ArXiv_Electromagnetics_MW", "url": f"https://export.arxiv.org/api/query?search_query=electromagnetics+microwave+propagation+antenna+field&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Wave_Propagation", "url": f"https://export.arxiv.org/api/query?search_query=wave+propagation+scattering+diffraction+medium&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Mechanics", "url": f"https://export.arxiv.org/api/query?search_query=quantum+mechanics+wavefunction+measurement+superposition&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Statistical_Mechanics", "url": f"https://export.arxiv.org/api/query?search_query=statistical+mechanics+entropy+thermodynamics+Boltzmann&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_General_Relativity", "url": f"https://export.arxiv.org/api/query?search_query=general+relativity+spacetime+curvature+Einstein&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Quantum_Field_Theory", "url": f"https://export.arxiv.org/api/query?search_query=quantum+field+theory+standard+model+gauge&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Plasma_Physics", "url": f"https://export.arxiv.org/api/query?search_query=plasma+physics+fusion+electromagnetic+discharge&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Condensed_Matter", "url": f"https://export.arxiv.org/api/query?search_query=cat:cond-mat&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cosmology", "url": f"https://export.arxiv.org/api/query?search_query=cat:astro-ph.CO&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Applied_Physics", "url": f"https://export.arxiv.org/api/query?search_query=cat:physics.app-ph&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+        # Electromagnetism
+        A("EM_Maxwell_Equations", "Maxwell equations electromagnetic fields waves propagation", True),
+        A("EM_Antenna_Theory", "antenna theory radiation pattern electromagnetic design", True),
+        A("EM_Microwave_Engineering", "microwave engineering waveguide transmission line RF", True),
+        A("EM_Radar_Propagation", "radar wave propagation atmosphere refraction scattering", True),
+        A("EM_Plasma_Physics", "plasma physics electromagnetics ionosphere propagation", True),
+        # Quantum Mechanics
+        A("QM_Foundations", "quantum mechanics wavefunction Schrodinger measurement interpretation", True),
+        A("QM_Entanglement", "quantum entanglement Bell inequality nonlocality EPR", True),
+        A("QM_Applications", "quantum mechanics applications semiconductors lasers materials", True),
+        A("QFT_Standard_Model", "quantum field theory standard model gauge symmetry", True),
+        A("QM_Many_Body", "many body quantum mechanics condensed matter correlated", True),
+        # Classical Mechanics
+        A("Classical_Lagrangian", "Lagrangian Hamiltonian mechanics canonical transformation"),
+        A("Classical_Rigid_Body", "rigid body dynamics rotation inertia mechanics"),
+        A("Classical_Chaos", "classical chaos Lyapunov exponent sensitive dependence"),
+        # Relativity
+        A("Special_Relativity", "special relativity Lorentz transformation spacetime invariance"),
+        A("General_Relativity", "general relativity curvature Einstein field equations"),
+        A("Gravitational_Waves", "gravitational waves LIGO detection binary merger"),
+        # Statistical Physics
+        A("Stat_Mech_Entropy", "statistical mechanics entropy thermodynamics Boltzmann"),
+        A("Phase_Transitions", "phase transitions critical phenomena universality renormalization"),
+        A("Condensed_Matter", "cat:cond-mat"),
+        # Applied Physics
+        A("Applied_Physics_Sensors", "cat:physics.app-ph"),
+        A("Optics_Photonics", "optics photonics laser fiber imaging systems"),
+        A("Nuclear_Physics", "cat:nucl-th"),
+        A("Astrophysics", "cat:astro-ph"),
+        T("Feynman_Lectures", "https://archive.org/stream/feynmanlectures01feyn/feynmanlectures01feyn_djvu.txt"),
     ],
 
     # ── QUANTUM ADVANCED ─────────────────────────────────────────
     "quantum_advanced": [
-        {"name": "ArXiv_Quantum_Radar", "url": f"https://export.arxiv.org/api/query?search_query=quantum+radar+illumination+entanglement+SNR&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Sensing", "url": f"https://export.arxiv.org/api/query?search_query=quantum+sensing+metrology+precision+measurement&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Post_Quantum", "url": f"https://export.arxiv.org/api/query?search_query=post+quantum+cryptography+NIST+lattice+ML-DSA&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Computing", "url": f"https://export.arxiv.org/api/query?search_query=quantum+computing+qubit+gate+algorithm&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Communication", "url": f"https://export.arxiv.org/api/query?search_query=quantum+communication+QKD+entanglement+teleportation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Error_Correction", "url": f"https://export.arxiv.org/api/query?search_query=quantum+error+correction+fault+tolerant+surface+code&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_Defense", "url": f"https://export.arxiv.org/api/query?search_query=quantum+technology+defense+military+national+security&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
-        {"name": "ArXiv_Quantum_AI", "url": f"https://export.arxiv.org/api/query?search_query=quantum+machine+learning+variational+circuit&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv", "pdf": True},
+        A("Quantum_Computing_Algorithms", "quantum algorithm Grover Shor speedup complexity", True),
+        A("Quantum_Error_Correction", "quantum error correction fault tolerant surface code", True),
+        A("Quantum_Hardware", "quantum hardware qubit superconducting ion trap photonic", True),
+        A("Post_Quantum_Crypto", "post quantum cryptography NIST lattice CRYSTALS ML-DSA", True),
+        A("QKD_Protocols", "quantum key distribution BB84 E91 security proof", True),
+        A("Quantum_Sensing", "quantum sensing metrology precision measurement Heisenberg", True),
+        A("Quantum_Radar", "quantum radar illumination entanglement target detection", True),
+        A("Quantum_Communication", "quantum communication teleportation repeater network", True),
+        A("Quantum_AI_ML", "quantum machine learning variational circuit optimization", True),
+        A("Quantum_Simulation", "quantum simulation many body Hamiltonian chemistry", True),
+        A("Quantum_Cryptanalysis", "quantum cryptanalysis Shor algorithm RSA ECC breaking", True),
+        A("Quantum_Defense", "quantum technology defense military national security applications", True),
+        A("Quantum_Supremacy", "quantum supremacy advantage computational complexity experiment", True),
+        A("Topological_Quantum", "topological quantum computing anyons fault tolerant", True),
     ],
 
-    # ── MATHEMATICS ADVANCED ─────────────────────────────────────
-    "mathematics_advanced": [
-        {"name": "ArXiv_Linear_Algebra", "url": f"https://export.arxiv.org/api/query?search_query=linear+algebra+matrix+eigenvalue+SVD+applications&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Fourier_Analysis", "url": f"https://export.arxiv.org/api/query?search_query=Fourier+analysis+transform+signal+processing+wavelet&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Probability_Stats", "url": f"https://export.arxiv.org/api/query?search_query=cat:math.PR&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Optimization", "url": f"https://export.arxiv.org/api/query?search_query=cat:math.OC&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Number_Theory", "url": f"https://export.arxiv.org/api/query?search_query=cat:math.NT&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Differential_Equations", "url": f"https://export.arxiv.org/api/query?search_query=differential+equations+dynamical+systems+control&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Graph_Theory", "url": f"https://export.arxiv.org/api/query?search_query=graph+theory+network+algorithm+complexity&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Numerical_Methods", "url": f"https://export.arxiv.org/api/query?search_query=numerical+methods+computation+approximation+algorithm&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Information_Theory", "url": f"https://export.arxiv.org/api/query?search_query=information+theory+Shannon+entropy+channel+capacity&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_ML_Mathematics", "url": f"https://export.arxiv.org/api/query?search_query=mathematics+machine+learning+theory+convergence&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "Euclid_Elements", "url": "https://www.gutenberg.org/cache/epub/21076/pg21076.txt", "type": "text"},
+    # ── RADAR / EW ────────────────────────────────────────────────
+    "radar_ew": [
+        A("Radar_Waveform_Design", "radar waveform design ambiguity function LFM optimization", True),
+        A("LPI_Radar_Deep", "LPI radar low probability intercept waveform design", True),
+        A("Phased_Array_AESA", "phased array AESA digital beamforming adaptive", True),
+        A("SAR_ISAR_Imaging", "SAR ISAR synthetic aperture radar imaging processing", True),
+        A("EW_Jamming_ECM", "electronic warfare jamming ECM DRFM deceptive", True),
+        A("Radar_ML_Detection", "radar machine learning target detection classification", True),
+        A("FMCW_Automotive", "FMCW radar automotive pedestrian detection 77GHz", True),
+        A("Pulse_Compression", "pulse compression chirp Barker matched filter sidelobe", True),
+        A("Doppler_MTI_MTD", "Doppler processing MTI MTD moving target indicator", True),
+        A("Radar_Cross_Section", "radar cross section RCS stealth reduction signature", True),
+        A("ESM_ELINT_Systems", "electronic support measures ELINT signal intercept emitter", True),
+        A("Cognitive_Adaptive_Radar", "cognitive radar adaptive waveform spectrum environment", True),
+        A("MIMO_Radar", "MIMO radar multiple input output diversity waveform", True),
+        A("Radar_Clutter_CFAR", "radar clutter suppression CFAR constant false alarm", True),
+        A("EW_Defense_ECCM", "electronic countermeasure counter ECCM protection", True),
+        A("EOB_Emitter_ID", "electronic order of battle emitter identification classification", True),
+        A("Polyphase_Codes", "polyphase codes Frank P1 P2 P4 radar waveform LPI", True),
+        A("Frequency_Hopping_LPI", "frequency hopping spread spectrum LPI radar intercept", True),
+        A("Noise_Radar_Random", "noise radar random waveform LPI covert detection", True),
+        A("Quantum_Radar_Apps", "quantum radar illumination signal noise ratio detection", True),
+        A("SDR_GNU_Radio", "software defined radio SDR GNU Radio waveform implementation"),
+        A("Radar_Deep_Learning", "radar deep learning neural network classification recognition"),
+        A("Spectrum_Sensing", "spectrum sensing cognitive radio interference detection"),
+        A("Over_Horizon_Radar", "over horizon radar OTH HF skywave detection"),
+        {"name": "NASA_Radar", "url": "https://ntrs.nasa.gov/api/citations/search?q=radar&rows=30", "type": "nasa"},
     ],
 
-    # ── MUSIC ─────────────────────────────────────────────────────
-    "music": [
-        {"name": "ArXiv_HipHop_Lyricism", "url": f"https://export.arxiv.org/api/query?search_query=hip+hop+lyricism+flow+rhyme+multisyllabic&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Music_Theory", "url": f"https://export.arxiv.org/api/query?search_query=music+theory+harmony+chord+progression+composition&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Beat_Production", "url": f"https://export.arxiv.org/api/query?search_query=music+production+beat+sampling+drum+machine&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Rap_Culture", "url": f"https://export.arxiv.org/api/query?search_query=hip+hop+culture+African+American+music+history&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Rhyme_Meter", "url": f"https://export.arxiv.org/api/query?search_query=rhyme+scheme+meter+verse+poetry+rap+analysis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Sound_Engineering", "url": f"https://export.arxiv.org/api/query?search_query=audio+engineering+mixing+mastering+acoustics&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Music_Cognition", "url": f"https://export.arxiv.org/api/query?search_query=music+cognition+emotion+brain+perception&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Blues_Jazz_Lineage", "url": f"https://export.arxiv.org/api/query?search_query=blues+jazz+soul+funk+lineage+African+American+music&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Songwriting_Craft", "url": f"https://export.arxiv.org/api/query?search_query=songwriting+hook+bridge+verse+chorus+craft&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Internal_Rhyme", "url": f"https://export.arxiv.org/api/query?search_query=internal+rhyme+alliteration+assonance+poetry+rap&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── SECURITY ─────────────────────────────────────────────────
+    "security": [
+        NVD("NVD_CRITICAL", "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&cvssV3Severity=CRITICAL"),
+        NVD("NVD_HIGH", "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&cvssV3Severity=HIGH"),
+        MITRE("MITRE_Enterprise", "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"),
+        MITRE("MITRE_Mobile", "https://raw.githubusercontent.com/mitre/cti/master/mobile-attack/mobile-attack.json"),
+        MITRE("MITRE_ICS", "https://raw.githubusercontent.com/mitre/cti/master/ics-attack/ics-attack.json"),
+        A("Malware_Detection_ML", "malware detection machine learning neural network"),
+        A("APT_Campaign_Analysis", "advanced persistent threat APT campaign attribution"),
+        A("Ransomware_Analysis", "ransomware attack defense recovery analysis"),
+        A("Intrusion_Detection", "intrusion detection system anomaly network"),
+        A("Vulnerability_Research", "vulnerability assessment exploit CVE disclosure"),
+        A("Zero_Trust_Architecture", "zero trust security architecture NIST implementation"),
+        A("AI_Adversarial_Security", "adversarial machine learning security attack defense"),
+        A("Network_Threat_Detection", "network threat detection SOC analytics"),
+        A("Phishing_Social_Eng", "phishing social engineering spear BEC"),
+        A("Cryptography_PQC", "cryptography encryption post quantum NIST"),
+        A("SIEM_Detection_Rules", "SIEM detection rules sigma analytics log"),
+        A("Threat_Intelligence", "cyber threat intelligence STIX TAXII sharing"),
+        A("Cloud_Security", "cloud security misconfiguration AWS Azure GCP"),
+        A("ICS_SCADA_Security", "ICS SCADA industrial control security"),
+        A("Supply_Chain_Attack", "supply chain attack software dependency"),
+        A("Active_Directory_Attack", "Active Directory Kerberos attack lateral"),
+        A("Web_App_Security", "web application security injection XSS CSRF"),
+        A("Digital_Forensics_IR", "digital forensics incident response DFIR"),
+        A("Red_Team_Pentest", "red team penetration testing offensive security"),
+        T("GTFOBins", "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/README.md"),
+        T("PayloadsAllTheThings", "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/README.md"),
+        T("PortSwigger_SQLi", "https://portswigger.net/web-security/sql-injection"),
+        T("PortSwigger_XSS", "https://portswigger.net/web-security/cross-site-scripting"),
+        T("PortSwigger_SSRF", "https://portswigger.net/web-security/ssrf"),
+        T("PortSwigger_XXE", "https://portswigger.net/web-security/xxe"),
+        T("PortSwigger_Auth", "https://portswigger.net/web-security/authentication"),
+        T("Sigma_Rules", "https://raw.githubusercontent.com/SigmaHQ/sigma/master/README.md"),
+        T("Impacket", "https://raw.githubusercontent.com/fortra/impacket/master/README.md"),
     ],
 
-    # ── GARDENING ─────────────────────────────────────────────────
-    "gardening": [
-        {"name": "Henderson_Gardening", "url": "https://www.gutenberg.org/cache/epub/43500/pg43500.txt", "type": "text"},
-        {"name": "ArXiv_Soil_Science", "url": f"https://export.arxiv.org/api/query?search_query=soil+science+composition+organic+matter+amendment&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Companion_Planting", "url": f"https://export.arxiv.org/api/query?search_query=companion+planting+intercropping+vegetable+garden&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Permaculture", "url": f"https://export.arxiv.org/api/query?search_query=permaculture+sustainable+food+systems+design&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Raised_Bed", "url": f"https://export.arxiv.org/api/query?search_query=raised+bed+gardening+soil+yield+vegetable&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Composting", "url": f"https://export.arxiv.org/api/query?search_query=composting+soil+amendment+organic+decomposition&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Pest_Management", "url": f"https://export.arxiv.org/api/query?search_query=integrated+pest+management+organic+garden&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Medicinal_Herbs", "url": f"https://export.arxiv.org/api/query?search_query=medicinal+herbs+phytochemistry+therapeutic+garden&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Native_Plants_SE", "url": f"https://export.arxiv.org/api/query?search_query=native+plants+southeastern+United+States+ecology&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Water_Management", "url": f"https://export.arxiv.org/api/query?search_query=irrigation+water+management+garden+drip+system&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Alabama_Gardening", "url": f"https://export.arxiv.org/api/query?search_query=Alabama+Southeast+garden+climate+USDA+zone+7+8&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Seed_Saving", "url": f"https://export.arxiv.org/api/query?search_query=seed+saving+heirloom+varieties+preservation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── SECURITY HISTORICAL ───────────────────────────────────────
+    "security_historical": [
+        A("Stuxnet_Full", "Stuxnet worm ICS SCADA Iran nuclear centrifuge"),
+        A("SolarWinds_Sunburst", "SolarWinds Sunburst supply chain attack analysis"),
+        A("WannaCry_EternalBlue", "WannaCry ransomware EternalBlue NHS analysis"),
+        A("NotPetya_Wiper", "NotPetya cyberattack Ukraine Maersk wiper malware"),
+        A("Colonial_Pipeline", "Colonial Pipeline ransomware DarkSide critical infrastructure"),
+        A("Mirai_IoT_Botnet", "Mirai botnet IoT DDoS Dyn DNS attack"),
+        A("Equifax_Breach", "Equifax data breach Apache Struts PII exposure"),
+        A("Target_POS_Breach", "Target breach POS malware retail credit card"),
+        A("Log4Shell_Log4j", "Log4Shell Log4j CVE-2021-44228 analysis exploitation"),
+        A("MOVEit_Cl0p", "MOVEit Cl0p ransomware file transfer breach"),
+        A("Volt_Typhoon_China", "Volt Typhoon China critical infrastructure living land"),
+        A("Midnight_Blizzard", "Midnight Blizzard APT29 Microsoft email espionage"),
+        A("APT28_Fancy_Bear", "APT28 Fancy Bear GRU Russia election interference"),
+        A("Lazarus_DPRK", "Lazarus DPRK North Korea cryptocurrency theft"),
+        A("Nation_State_Cyber", "nation state cyberattack attribution espionage"),
+        A("Cyber_Warfare_History", "cyber warfare history Estonia Georgia Ukraine"),
+        A("Zero_Day_Market", "zero day exploit market Pwn2Own Zerodium history"),
+        A("NSA_TAO_Tools", "NSA TAO hacking tools Shadow Brokers leak"),
+        A("APT41_China_Dual", "APT41 China espionage financial crime dual mission"),
+        A("FIN7_Carbanak", "FIN7 Carbanak financial crime point of sale"),
     ],
 
-    # ── NISABA SOUL / NISA DOCS ───────────────────────────────────
-    "nisaba_soul": [
-        {"name": "ArXiv_AI_Alignment", "url": f"https://export.arxiv.org/api/query?search_query=AI+alignment+values+safety+beneficial+AGI&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_AI_Personality", "url": f"https://export.arxiv.org/api/query?search_query=AI+personality+character+identity+language+model&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_LLM_Memory", "url": f"https://export.arxiv.org/api/query?search_query=LLM+memory+retrieval+augmented+generation+RAG&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Sumerian_History", "url": f"https://export.arxiv.org/api/query?search_query=Sumerian+civilization+cuneiform+writing+Nisaba&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_AI_Trust", "url": f"https://export.arxiv.org/api/query?search_query=AI+trust+human+machine+relationship+collaboration&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Conversational_AI", "url": f"https://export.arxiv.org/api/query?search_query=conversational+AI+dialogue+system+persona+design&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Explainable_AI", "url": f"https://export.arxiv.org/api/query?search_query=explainable+AI+XAI+interpretability+transparency&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── SECURITY OFFENSIVE ────────────────────────────────────────
+    "security_offensive": [
+        A("Exploit_Dev_Buffer", "exploit development buffer overflow ROP chain shellcode"),
+        A("Living_Off_Land", "living off the land LOLBAS fileless malware"),
+        A("C2_Framework_Design", "command control C2 framework Cobalt Strike Sliver detection"),
+        A("Kerberoasting_PTH", "Kerberoasting Pass Hash Golden Ticket AD attack"),
+        A("Lateral_Movement_SMB", "lateral movement SMB WMI PsExec detection"),
+        A("Privilege_Escalation", "privilege escalation Windows Linux technique UAC bypass"),
+        A("Persistence_Mechanisms", "persistence registry scheduled task backdoor implant"),
+        A("Credential_Dumping", "credential dumping Mimikatz LSASS NTLM hash extraction"),
+        A("Defense_Evasion_AV", "defense evasion AV bypass obfuscation AMSI EDR"),
+        A("Wireless_Attack_WiFi", "wireless attack WiFi WPA2 evil twin PMKID"),
+        A("Social_Engineering_Adv", "social engineering vishing pretexting BEC wire fraud"),
+        A("Physical_Pentest", "physical security access control RFID badge cloning"),
+        A("AI_LLM_Attack", "AI LLM prompt injection jailbreak model extraction"),
+        A("BloodHound_AD_Paths", "BloodHound attack path AD graph analysis"),
+        A("DNS_Exfiltration", "data exfiltration DNS tunneling covert channel"),
+        A("Web_App_Exploitation", "web application exploitation chain bypass WAF"),
+        A("Mobile_App_Attack", "mobile application security Android iOS pentest"),
+        A("Cloud_Pentest", "cloud penetration testing AWS Azure misconfiguration IAM"),
+        A("Hardware_Hacking", "hardware hacking JTAG UART firmware extraction"),
+        A("Malware_Development", "malware development evasion shellcode loader technique"),
     ],
 
-    # ── SOCIAL DYNAMICS ───────────────────────────────────────────
-    "social_dynamics": [
-        {"name": "ArXiv_Persuasion", "url": f"https://export.arxiv.org/api/query?search_query=persuasion+influence+psychology+Cialdini+compliance&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Negotiation", "url": f"https://export.arxiv.org/api/query?search_query=negotiation+strategy+psychology+conflict+resolution&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Emotional_Intelligence", "url": f"https://export.arxiv.org/api/query?search_query=emotional+intelligence+empathy+social+awareness&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Leadership", "url": f"https://export.arxiv.org/api/query?search_query=leadership+psychology+organizational+behavior&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Rhetoric", "url": f"https://export.arxiv.org/api/query?search_query=rhetoric+argumentation+persuasive+communication&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Power_Dynamics", "url": f"https://export.arxiv.org/api/query?search_query=power+dynamics+social+hierarchy+influence+status&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Nonverbal_Communication", "url": f"https://export.arxiv.org/api/query?search_query=nonverbal+communication+body+language+microexpression&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Grief_Bereavement", "url": f"https://export.arxiv.org/api/query?search_query=grief+bereavement+loss+coping+psychology&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Veteran_Reintegration", "url": f"https://export.arxiv.org/api/query?search_query=veteran+military+reintegration+transition+civilian&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cultural_Intelligence", "url": f"https://export.arxiv.org/api/query?search_query=cultural+intelligence+cross+cultural+communication&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── SECURITY DEFENSIVE ────────────────────────────────────────
+    "security_defensive": [
+        A("Detection_Engineering", "detection engineering SIEM rule sigma alert"),
+        A("Threat_Hunting", "threat hunting hypothesis driven proactive detection"),
+        A("SOC_Operations", "SOC security operations center analyst playbook triage"),
+        A("Incident_Response", "incident response containment eradication recovery"),
+        A("EDR_XDR_Telemetry", "EDR XDR endpoint detection response telemetry"),
+        A("Blue_Team_Hardening", "blue team defensive hardening baselines"),
+        A("Honeypot_Deception", "honeypot deception technology canary token"),
+        A("Vulnerability_Management", "vulnerability management patch prioritization CVSS"),
+        A("Security_Architecture", "security architecture design defense in depth"),
+        A("Purple_Team_Exercise", "purple team red blue collaboration ATT&CK"),
+        A("Threat_Modeling", "threat modeling STRIDE PASTA architecture review"),
+        A("Security_Automation", "security automation SOAR orchestration response"),
+        A("MITRE_Coverage", "MITRE ATT&CK detection coverage gap analysis"),
+        A("Deception_Technology", "deception technology adversary engagement honeypot"),
+        A("Zero_Trust_Impl", "zero trust implementation microsegmentation identity"),
+        T("Sigma_Readme", "https://raw.githubusercontent.com/SigmaHQ/sigma/master/README.md"),
+    ],
+
+    # ── DEFENSE COMPLIANCE ────────────────────────────────────────
+    "defense_compliance": [
+        A("NIST_800_171_Deep", "NIST 800-171 CUI defense contractor compliance"),
+        A("CMMC_Framework", "CMMC cybersecurity maturity model certification DoD"),
+        A("FedRAMP_Authorization", "FedRAMP federal cloud authorization ATO process"),
+        A("RMF_Process", "Risk Management Framework RMF ATO authorization NIST"),
+        A("FISMA_Compliance", "FISMA federal information security management compliance"),
+        A("IL_Classification", "DoD impact level IL2 IL4 IL5 cloud classification"),
+        A("Security_Clearance", "security clearance SF-86 adjudication background investigation"),
+        A("PII_Privacy_Law", "PII privacy data protection GDPR CCPA compliance"),
+        A("SOC2_ISO27001", "SOC2 ISO 27001 security audit compliance framework"),
+        A("PQC_Compliance", "post quantum cryptography NIST FIPS 204 migration compliance", True),
+        A("AI_Governance_NIST", "AI governance risk management framework NIST AI RMF"),
+        A("Insider_Threat_Program", "insider threat program detection monitoring"),
+        A("ITAR_EAR_Export", "ITAR EAR export control technology defense"),
+        A("CUI_Handling", "controlled unclassified information CUI handling marking"),
+        A("Continuous_Monitoring", "continuous monitoring ISCM cybersecurity posture"),
+    ],
+
+    # ── BUSINESS CONTRACTS ────────────────────────────────────────
+    "business_contracts": [
+        A("Federal_Contracting", "federal government contracting procurement defense"),
+        A("Proposal_Writing_RFP", "government proposal writing RFP technical volume"),
+        A("IDIQ_GWAC_Vehicles", "IDIQ GWAC indefinite delivery contract government"),
+        A("Defense_Acquisition", "defense acquisition DoD program management"),
+        A("SBIR_STTR_Programs", "SBIR STTR small business innovation research DoD"),
+        A("SOW_PWS_Writing", "statement of work performance work specification"),
+        A("Contract_Negotiation", "contract negotiation terms conditions government"),
+        A("BD_Capture_Mgmt", "business development capture management pipeline"),
+        A("Technical_White_Papers", "technical white paper capability brief proposal"),
+        A("Startup_Commercialization", "startup commercialization innovation technology transfer"),
+        A("IP_Patent_Strategy", "intellectual property patent strategy technology"),
+        A("Project_Mgmt_DoD", "project management agile earned value DoD"),
+        A("Pricing_Cost_Analysis", "government contract pricing cost analysis strategy"),
+        A("Small_Business_DoD", "small business DoD contracting 8a HUBZone SDVOSB"),
+        A("Past_Performance", "past performance contractor evaluation CPARS PPIRS"),
+        T("FAR_Overview", "https://raw.githubusercontent.com/GSA/GSA-Acquisition-FAR/main/README.md"),
+    ],
+
+    # ── LINUX COMMANDS ────────────────────────────────────────────
+    "linux_commands": [
+        T("GNU_Bash_Manual", "https://www.gnu.org/software/bash/manual/bash.html"),
+        T("GTFOBins_Full", "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/README.md"),
+        T("TLDR_grep", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/grep.md"),
+        T("TLDR_awk", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/awk.md"),
+        T("TLDR_sed", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/sed.md"),
+        T("TLDR_find", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/find.md"),
+        T("TLDR_ssh", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/ssh.md"),
+        T("TLDR_nmap", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/nmap.md"),
+        T("TLDR_curl", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/curl.md"),
+        T("TLDR_tcpdump", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/tcpdump.md"),
+        T("TLDR_ps", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/ps.md"),
+        T("TLDR_netstat", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/netstat.md"),
+        T("TLDR_git", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/git.md"),
+        T("TLDR_docker", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/docker.md"),
+        T("TLDR_python", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/python.md"),
+        T("TLDR_tar", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/tar.md"),
+        T("TLDR_rsync", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/rsync.md"),
+        T("TLDR_vim", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/vim.md"),
+        T("TLDR_tmux", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/tmux.md"),
+        T("TLDR_chmod", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/chmod.md"),
+        T("TLDR_cron", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/common/cron.md"),
+        T("TLDR_systemctl", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/linux/systemctl.md"),
+        T("TLDR_ip", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/linux/ip.md"),
+        T("TLDR_iptables", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/linux/iptables.md"),
+        T("TLDR_strace", "https://raw.githubusercontent.com/tldr-pages/tldr/main/pages/linux/strace.md"),
+        A("Bash_Scripting", "bash shell scripting automation linux command"),
+        A("Linux_Admin_Deep", "Linux system administration security hardening"),
+        A("Network_Commands", "network diagnostic commands tcpdump netstat ss linux"),
+        A("Forensics_Commands", "forensics command line dd strings file analysis linux"),
+        A("Git_Workflow", "git version control workflow branching collaboration"),
+        A("Docker_Operations", "Docker container operations management security"),
+        A("Python_Automation", "Python automation scripting DevOps command line"),
+        A("Regex_Text_Processing", "regular expressions grep sed awk text processing"),
+        A("Systemd_Service_Mgmt", "systemd service management unit files Linux"),
+        A("Package_Management", "Linux package manager apt yum brew pip conda"),
+    ],
+
+    # ── COMBAT MEDICINE ───────────────────────────────────────────
+    "combat_medicine": [
+        T("Gray_Anatomy", "https://www.gutenberg.org/cache/epub/39722/pg39722.txt"),
+        T("US_Army_Survival", "https://www.gutenberg.org/files/17007/17007-0.txt"),
+        A("TCCC_Protocol", "tactical combat casualty care TCCC prehospital military", True),
+        A("Hemorrhage_Control", "hemorrhage control tourniquet hemostatic agent junctional", True),
+        A("Airway_Field_Mgmt", "airway management intubation cricothyrotomy field", True),
+        A("MARCH_PAWS", "MARCH PAWS protocol combat trauma military medicine", True),
+        A("Blast_TBI_Injury", "blast injury IED traumatic brain injury military", True),
+        A("Combat_Medic_68W", "combat medic 68W field medicine Afghanistan Iraq", True),
+        A("Wound_Ballistics", "wound ballistics gunshot injury penetrating trauma treatment", True),
+        A("MEDEVAC_9Line", "MEDEVAC medical evacuation 9-line casualty transport", True),
+        A("PTSD_Combat_Trauma", "PTSD veterans combat trauma treatment VA", True),
+        A("TBI_Cognitive", "traumatic brain injury TBI veterans blast cognitive", True),
+        A("Damage_Control_Surgery", "damage control surgery trauma resuscitation REBOA", True),
+        A("Military_Pharmacology", "military pharmacology ketamine tranexamic acid morphine pain", True),
+        A("Point_of_Care_Austere", "point of care diagnostics field hospital austere environment", True),
+        A("Tactical_Medicine_EMS", "tactical medicine TEMS law enforcement emergency", True),
+        A("Mass_Casualty", "mass casualty incident MASCAL triage START JumpSTART", True),
+        A("Hypovolemic_Shock", "hypovolemic shock resuscitation fluid management trauma", True),
+        A("Battlefield_Anesthesia", "battlefield anesthesia ketamine sedation field surgery", True),
+        A("Combat_Stress_Reaction", "combat stress reaction acute battle fatigue resilience", True),
+        A("Extremity_Trauma", "extremity trauma amputation wound care military", True),
     ],
 
     # ── HEALTH ────────────────────────────────────────────────────
     "health": [
-        {"name": "Gray_Anatomy", "url": "https://www.gutenberg.org/cache/epub/39722/pg39722.txt", "type": "text"},
-        {"name": "ArXiv_Nutrition_Science", "url": f"https://export.arxiv.org/api/query?search_query=nutrition+science+macronutrients+micronutrients+health&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Exercise_Science", "url": f"https://export.arxiv.org/api/query?search_query=exercise+science+strength+training+physiology+performance&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Sleep_Science", "url": f"https://export.arxiv.org/api/query?search_query=sleep+science+circadian+rhythm+recovery+cognition&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_PTSD_Treatment", "url": f"https://export.arxiv.org/api/query?search_query=PTSD+treatment+veterans+trauma+therapy&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Longevity", "url": f"https://export.arxiv.org/api/query?search_query=longevity+aging+healthspan+lifestyle+intervention&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Gut_Microbiome", "url": f"https://export.arxiv.org/api/query?search_query=gut+microbiome+health+nutrition+brain+gut+axis&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Stress_Resilience", "url": f"https://export.arxiv.org/api/query?search_query=stress+resilience+cortisol+nervous+system+military&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Mental_Performance", "url": f"https://export.arxiv.org/api/query?search_query=mental+performance+focus+cognitive+enhancement+nootropics&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cardiovascular", "url": f"https://export.arxiv.org/api/query?search_query=cardiovascular+health+heart+fitness+VO2+max&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+        # Mental Health
+        A("Mental_Health_PTSD", "PTSD treatment veterans trauma therapy CBT EMDR"),
+        A("Anxiety_Depression", "anxiety depression treatment therapy medication evidence"),
+        A("Mindfulness_Clinical", "mindfulness based stress reduction MBSR clinical outcomes"),
+        A("Resilience_Psychology", "resilience psychological hardiness stress coping"),
+        A("Positive_Psychology", "positive psychology flourishing wellbeing strengths"),
+        A("Trauma_Healing", "trauma healing somatic therapy nervous system regulation"),
+        A("Sleep_Mental_Health", "sleep mental health insomnia CBT-I circadian"),
+        # Fitness and Performance
+        A("Strength_Training_Science", "strength training hypertrophy muscle physiology program"),
+        A("Endurance_Performance", "endurance performance VO2 max lactate threshold training"),
+        A("HIIT_Conditioning", "HIIT high intensity interval training conditioning metabolic"),
+        A("Mobility_Flexibility", "mobility flexibility joint health movement quality"),
+        A("Athletic_Recovery", "athletic recovery sleep nutrition HRV adaptation"),
+        A("Military_Fitness", "military fitness physical readiness training program"),
+        A("Periodization_Programming", "periodization programming training cycles peaking"),
+        # Yoga
+        A("Yoga_Science", "yoga science physiology benefits clinical research"),
+        A("Yoga_Mental_Health", "yoga mental health anxiety depression mindfulness practice"),
+        A("Yoga_Styles_Practice", "yoga styles Hatha Vinyasa Ashtanga Yin practice"),
+        A("Breathwork_Pranayama", "pranayama breathing yoga respiratory nervous system"),
+        # Nutrition
+        A("Nutrition_Performance", "nutrition athletic performance macronutrients timing"),
+        A("Anti_Inflammatory_Diet", "anti-inflammatory diet chronic disease prevention"),
+        A("Gut_Microbiome", "gut microbiome health nutrition brain axis"),
+        A("Fasting_Metabolic", "intermittent fasting metabolic health longevity"),
+        A("Supplements_Evidence", "supplements evidence based performance health"),
+        # Meditation / Transcendental
+        A("Transcendental_Meditation", "transcendental meditation TM mantra brainwave EEG"),
+        A("Meditation_Neuroscience", "meditation neuroscience brain plasticity cortex"),
+        A("Guided_Meditation_Research", "guided meditation visualization relaxation script outcomes"),
+        A("Vipassana_Mindfulness", "Vipassana insight meditation technique retreat outcomes"),
+        A("Loving_Kindness_Metta", "loving kindness metta meditation compassion research"),
+        # Wellness
+        A("Longevity_Science", "longevity aging healthspan lifestyle intervention"),
+        A("Stress_Physiology", "stress physiology cortisol HPA axis nervous system"),
+        A("Cold_Exposure_Sauna", "cold exposure Wim Hof sauna heat therapy health"),
+        A("Cardiovascular_Health", "cardiovascular health heart fitness prevention"),
+        A("Hormonal_Health", "hormonal health testosterone cortisol optimization"),
+        # Clinical (lighter touch)
+        A("Anatomy_Systems", "human anatomy physiology organ systems function"),
+        A("Disease_Mechanisms", "disease pathophysiology mechanisms chronic illness"),
+        A("Pharmacology_Basics", "pharmacology drug mechanisms interactions clinical"),
+    ],
+
+    # ── SPIRITUALITY ADVANCED ─────────────────────────────────────
+    "spiritual_advanced": [
+        # Sacred Texts - Primary Sources
+        T("Bible_KJV", "https://www.gutenberg.org/cache/epub/10/pg10.txt"),
+        T("Quran_English", "https://www.gutenberg.org/cache/epub/2800/pg2800.txt"),
+        T("Bhagavad_Gita", "https://www.gutenberg.org/cache/epub/2388/pg2388.txt"),
+        T("Upanishads", "https://www.gutenberg.org/cache/epub/68171/pg68171.txt"),
+        T("Dhammapada", "https://www.gutenberg.org/cache/epub/2017/pg2017.txt"),
+        T("Tao_Te_Ching", "https://www.gutenberg.org/cache/epub/216/pg216.txt"),
+        T("Tibetan_Book_Dead", "https://www.gutenberg.org/cache/epub/55060/pg55060.txt"),
+        T("Egyptian_Book_Dead", "https://www.gutenberg.org/cache/epub/55060/pg55060.txt"),
+        T("Rig_Veda", "https://www.gutenberg.org/cache/epub/16295/pg16295.txt"),
+        T("Mahabharata", "https://www.gutenberg.org/cache/epub/15474/pg15474.txt"),
+        T("Ramayana", "https://www.gutenberg.org/cache/epub/24869/pg24869.txt"),
+        T("Book_of_Job", "https://www.gutenberg.org/cache/epub/83/pg83.txt"),
+        T("Gospel_Thomas", "https://www.gutenberg.org/cache/epub/18824/pg18824.txt"),
+        T("Zoroastrian_Avesta", "https://www.gutenberg.org/cache/epub/2081/pg2081.txt"),
+        T("CIA_Gateway_Experience", "https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5"),
+        # Ancient Mythology
+        T("Greek_Mythology_Bulfinch", "https://www.gutenberg.org/cache/epub/4928/pg4928.txt"),
+        T("Norse_Mythology_Prose_Edda", "https://www.gutenberg.org/cache/epub/25946/pg25946.txt"),
+        T("Egyptian_Myths_Legends", "https://www.gutenberg.org/cache/epub/9411/pg9411.txt"),
+        T("Sumerian_Mythology", "https://www.gutenberg.org/cache/epub/10767/pg10767.txt"),
+        T("Celtic_Mythology", "https://www.gutenberg.org/cache/epub/14707/pg14707.txt"),
+        # Academic Research
+        A("Consciousness_Science_NCC", "consciousness science neural correlates awareness qualia"),
+        A("Gateway_Monroe_Hemi", "Monroe Institute hemi-sync binaural beats consciousness"),
+        A("OBE_Sleep_Paralysis", "out of body experience sleep paralysis autoscopy"),
+        A("Remote_Viewing_Stargate", "remote viewing Stargate psi CIA parapsychology"),
+        A("Lucid_Dream_WILD_MILD", "lucid dreaming WILD MILD technique REM induction"),
+        A("NDE_Consciousness", "near death experience NDE consciousness afterlife cardiac"),
+        A("Psychedelics_Mystical", "psilocybin DMT mystical experience ego dissolution"),
+        A("Shamanism_Indigenous", "shamanism indigenous ceremony vision quest healing"),
+        A("UAP_Scientific", "UAP UFO unexplained aerial phenomena scientific analysis"),
+        A("Quantum_Consciousness", "quantum consciousness Penrose Orch OR microtubule"),
+        A("Dogon_People_Sirius", "Dogon people Sirius star Mali West Africa cosmology"),
+        A("Ancient_Egypt_Religion", "ancient Egypt religion Osiris Ra cosmology afterlife"),
+        A("African_Traditional_Religion", "African traditional religion Yoruba Vodou Akan ancestors"),
+        A("Aboriginal_Dreamtime", "Aboriginal Australian dreamtime spirituality tradition"),
+        A("Native_American_Spiritual", "Native American spirituality ceremony medicine wheel"),
+        A("Rastafari_Religion", "Rastafari religion Ethiopia Haile Selassie Jamaica"),
+        A("Kabbalah_Jewish_Mysticism", "Kabbalah Jewish mysticism Zohar Sefirot tree of life"),
+        A("Sufism_Islamic_Mysticism", "Sufism Islamic mysticism Rumi whirling dervish"),
+        A("Zen_Buddhism_Practice", "Zen Buddhism koan meditation Soto Rinzai practice"),
+        A("Tibetan_Buddhism_Bardo", "Tibetan Buddhism Bardo Thodol reincarnation consciousness"),
+        A("Hindu_Advaita_Vedanta", "Hinduism Advaita Vedanta non-dual consciousness Brahman"),
+        A("Christianity_Mysticism", "Christian mysticism contemplative prayer desert fathers"),
+        A("Dead_Sea_Scrolls", "Dead Sea Scrolls Qumran Essenes biblical manuscripts"),
+        A("Gnostic_Texts", "Gnostic texts Nag Hammadi Gospel Thomas Sophia"),
+        A("Breathwork_Holotropic", "Stanislav Grof holotropic breathwork non-ordinary states"),
+        A("Meditation_Brainwave", "meditation brainwave alpha theta delta gamma EEG"),
+    ],
+
+    # ── MUSIC ─────────────────────────────────────────────────────
+    "music": [
+        # Hip Hop Craft
+        A("HipHop_Flow_Rhyme", "hip hop flow rhyme scheme multisyllabic internal"),
+        A("HipHop_Lyricism_Craft", "hip hop lyricism wordplay metaphor punchline technique"),
+        A("Rap_Delivery_Voice", "rap vocal delivery cadence breath control performance"),
+        A("HipHop_Battle_Freestyle", "hip hop battle rap freestyle cipher improvisation"),
+        A("HipHop_Storytelling", "hip hop storytelling narrative concept album"),
+        A("Beat_Production_Sampling", "music production beat making sampling drum machine"),
+        A("Mixing_Mastering", "mixing mastering audio engineering EQ compression"),
+        A("Sound_Design_Synthesis", "sound design synthesis oscillator filter modular"),
+        # Music Theory Deep
+        A("Harmony_Counterpoint", "harmony counterpoint voice leading chord progression"),
+        A("Modal_Theory", "modal theory modes Dorian Phrygian Lydian jazz"),
+        A("Rhythm_Meter_Deep", "rhythm meter polyrhythm syncopation groove feel"),
+        A("Orchestration_Arrangement", "orchestration arrangement instrumentation score"),
+        A("Music_Composition", "music composition form structure sonata rondo"),
+        A("Jazz_Theory_Improv", "jazz theory improvisation bebop chord substitution"),
+        A("Music_Cognition_Emotion", "music cognition emotion brain perception memory"),
+        A("Psychoacoustics", "psychoacoustics auditory perception loudness pitch timbre"),
+        # Music History
+        A("African_American_Music", "African American music history blues gospel soul funk"),
+        A("Jazz_History_Deep", "jazz history New Orleans bebop hard bop free fusion"),
+        A("Blues_Origins", "blues origins Delta Chicago electric history"),
+        A("Soul_RnB_History", "soul RnB Motown Philadelphia history"),
+        A("HipHop_History_Culture", "hip hop history culture Bronx Kool Herc evolution"),
+        A("Rap_Generations", "rap generations golden age gangsta conscious trap evolution"),
+        A("Electronic_Music_History", "electronic music history techno house EDM"),
+        A("Rock_Classical_Influence", "rock classical music influence Beatles Led Zeppelin"),
+        A("Music_African_Roots", "music African roots drumming polyrhythm diaspora"),
+        A("Songwriting_Craft", "songwriting hook bridge verse chorus craft"),
+        A("Music_Business", "music business industry streaming royalties contracts"),
+    ],
+
+    # ── PHILOSOPHY ────────────────────────────────────────────────
+    "philosophy": [
+        T("Plato_Republic", "https://www.gutenberg.org/files/1497/1497-0.txt"),
+        T("Aristotle_Ethics", "https://www.gutenberg.org/files/8438/8438-0.txt"),
+        T("Marcus_Aurelius", "https://www.gutenberg.org/cache/epub/2680/pg2680.txt"),
+        T("Seneca_Letters", "https://www.gutenberg.org/cache/epub/1464/pg1464.txt"),
+        T("Epictetus_Discourses", "https://www.gutenberg.org/cache/epub/4135/pg4135.txt"),
+        T("Nietzsche_Zarathustra", "https://www.gutenberg.org/files/1998/1998-0.txt"),
+        T("Nietzsche_Beyond_Good", "https://www.gutenberg.org/cache/epub/4363/pg4363.txt"),
+        T("Descartes_Meditations", "https://www.gutenberg.org/files/59/59-0.txt"),
+        T("Kant_Critique", "https://www.gutenberg.org/cache/epub/4280/pg4280.txt"),
+        T("Hume_Enquiry", "https://www.gutenberg.org/cache/epub/9662/pg9662.txt"),
+        T("Spinoza_Ethics", "https://www.gutenberg.org/cache/epub/3800/pg3800.txt"),
+        T("Schopenhauer_World", "https://www.gutenberg.org/cache/epub/38427/pg38427.txt"),
+        T("Plato_Dialogues", "https://www.gutenberg.org/cache/epub/1656/pg1656.txt"),
+        T("Aristotle_Politics", "https://www.gutenberg.org/cache/epub/6762/pg6762.txt"),
+        A("Stoicism_Practice", "Stoicism virtue reason practice Marcus Aurelius"),
+        A("Existentialism_Deep", "existentialism Sartre Camus Heidegger being nothingness"),
+        A("Philosophy_Mind", "philosophy of mind consciousness qualia hard problem"),
+        A("Ethics_Moral_Theory", "ethics moral theory deontology consequentialism virtue"),
+        A("Epistemology", "epistemology knowledge belief justification"),
+        A("Political_Philosophy", "political philosophy justice Rawls liberty democracy"),
+        A("Philosophy_Science", "philosophy of science Kuhn paradigm falsification Popper"),
+        A("Eastern_Philosophy", "Eastern philosophy Taoism Confucianism Buddhism Zen"),
+        A("African_Philosophy", "African philosophy Ubuntu Dogon cosmology tradition"),
+        A("Indigenous_Philosophy", "indigenous philosophy Native American cosmology knowledge"),
+        A("AI_Ethics_Philosophy", "AI ethics moral philosophy autonomous systems"),
+        A("Free_Will_Determinism", "free will determinism compatibilism moral responsibility"),
+        A("Metaphysics_Reality", "metaphysics ontology reality substance causation"),
+        A("Philosophy_Language", "philosophy of language meaning reference truth"),
+    ],
+
+    # ── PSYCHOLOGY ────────────────────────────────────────────────
+    "psychology": [
+        A("Cognitive_Psychology", "cognitive psychology memory attention perception learning"),
+        A("Social_Psychology", "social psychology conformity obedience influence Milgram"),
+        A("Developmental_Psychology", "developmental psychology lifespan Erikson Piaget"),
+        A("Personality_Theory", "personality theory Big Five MBTI traits assessment"),
+        A("Motivation_Theory", "motivation theory self determination Maslow needs"),
+        A("Behavioral_Psychology", "behavioral psychology conditioning reinforcement Skinner"),
+        A("Neuropsychology", "neuropsychology brain behavior prefrontal executive"),
+        A("Trauma_Psychology", "trauma psychology PTSD complex developmental ACE"),
+        A("Positive_Psychology_Deep", "positive psychology flourishing Seligman PERMA"),
+        A("Grief_Loss_Models", "grief loss Kubler Ross stages bereavement coping"),
+        A("Attachment_Theory", "attachment theory Bowlby secure avoidant anxious"),
+        A("Leadership_Psychology", "leadership psychology organizational behavior management"),
+        A("Body_Language_Science", "body language nonverbal communication microexpression"),
+        A("Deescalation_Psychology", "de-escalation conflict resolution crisis intervention"),
+        A("Cognitive_Bias", "cognitive bias heuristics Kahneman decision making"),
+        A("Flow_State", "flow state optimal experience Csikszentmihalyi performance"),
+        T("William_James_Psychology", "https://www.gutenberg.org/cache/epub/630/pg630.txt"),
+    ],
+
+    # ── SOCIAL DYNAMICS ───────────────────────────────────────────
+    "social_dynamics": [
+        A("Persuasion_Influence", "persuasion influence psychology Cialdini compliance"),
+        A("Negotiation_Strategy", "negotiation strategy psychology BATNA Harvard"),
+        A("Emotional_Intelligence", "emotional intelligence empathy social awareness Goleman"),
+        A("Rapport_Trust_Building", "rapport building trust interpersonal communication"),
+        A("Rhetoric_Argumentation", "rhetoric argumentation persuasive communication Aristotle"),
+        A("Power_Dynamics", "power dynamics social hierarchy influence status"),
+        A("Nonverbal_Microexpressions", "nonverbal microexpression body language Ekman"),
+        A("Cultural_Intelligence", "cultural intelligence cross cultural communication"),
+        A("Professional_Networking", "professional networking career relationship building"),
+        A("Conflict_Resolution", "conflict resolution mediation restorative justice"),
+        A("Group_Dynamics", "group dynamics team cohesion social loafing"),
+        A("Charisma_Presence", "charisma executive presence leadership communication"),
+        A("Active_Listening", "active listening empathic communication technique"),
+        A("Veteran_Reintegration", "veteran military reintegration transition civilian"),
+        A("Interpersonal_Skills", "interpersonal skills relationship psychology communication"),
+    ],
+
+    # ── HISTORY ───────────────────────────────────────────────────
+    "history": [
+        T("Sun_Tzu_Art_War", "https://www.gutenberg.org/cache/epub/132/pg132.txt"),
+        T("Machiavelli_Prince", "https://www.gutenberg.org/cache/epub/1232/pg1232.txt"),
+        T("Caesar_Gallic_Wars", "https://www.gutenberg.org/cache/epub/10657/pg10657.txt"),
+        T("Clausewitz_On_War", "https://www.gutenberg.org/cache/epub/1946/pg1946.txt"),
+        T("Herodotus_Histories", "https://www.gutenberg.org/cache/epub/2707/pg2707.txt"),
+        T("Thucydides", "https://www.gutenberg.org/cache/epub/7142/pg7142.txt"),
+        T("US_Constitution", "https://www.gutenberg.org/cache/epub/5/pg5.txt"),
+        T("Declaration_Independence", "https://www.gutenberg.org/cache/epub/1/pg1.txt"),
+        A("Military_Strategy_History", "military strategy doctrine warfare history"),
+        A("Afghanistan_Iraq_COIN", "Afghanistan Iraq war counterinsurgency COIN lessons"),
+        A("Cold_War_Intelligence", "Cold War nuclear deterrence intelligence CIA KGB"),
+        A("American_Military_History", "American military history Civil War WW2 Korea Vietnam"),
+        A("Ancient_Greece_Rome", "ancient Greece Rome empire civilization culture"),
+        A("Medieval_History", "medieval history Byzantine Islamic empire crusades"),
+        A("African_History_Deep", "African history empire Mali Songhai Egypt civilization"),
+        A("Slavery_Civil_Rights", "American slavery civil rights movement history"),
+        A("WW2_History", "World War 2 strategy campaigns Holocaust Pacific"),
+        A("Cold_War_Deep", "Cold War proxy wars Berlin Wall Cuban Missile Crisis"),
+        A("Intelligence_History", "intelligence history espionage OSS CIA history"),
+        A("Native_American_History", "Native American history tribes culture resistance"),
     ],
 
     # ── CREATIVE WRITING ─────────────────────────────────────────
     "creative_writing": [
-        {"name": "Poe_Tales", "url": "https://www.gutenberg.org/cache/epub/2147/pg2147.txt", "type": "text"},
-        {"name": "Lovecraft_Cthulhu", "url": "https://www.gutenberg.org/cache/epub/68595/pg68595.txt", "type": "text"},
-        {"name": "Stoker_Dracula", "url": "https://www.gutenberg.org/cache/epub/345/pg345.txt", "type": "text"},
-        {"name": "Shelley_Frankenstein", "url": "https://www.gutenberg.org/cache/epub/84/pg84.txt", "type": "text"},
-        {"name": "Doyle_Sherlock_Holmes", "url": "https://www.gutenberg.org/cache/epub/1661/pg1661.txt", "type": "text"},
-        {"name": "Strunk_White_Style", "url": "https://www.gutenberg.org/cache/epub/37134/pg37134.txt", "type": "text"},
-        {"name": "Aristotle_Poetics", "url": "https://www.gutenberg.org/cache/epub/1974/pg1974.txt", "type": "text"},
-        {"name": "ArXiv_Narrative_Structure", "url": f"https://export.arxiv.org/api/query?search_query=narrative+structure+fiction+story+arc+Campbell&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Character_Development", "url": f"https://export.arxiv.org/api/query?search_query=character+development+fiction+protagonist+arc+motivation&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Supernatural_Horror", "url": f"https://export.arxiv.org/api/query?search_query=supernatural+horror+gothic+fiction+paranormal+narrative&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Dialogue_Craft", "url": f"https://export.arxiv.org/api/query?search_query=dialogue+writing+fiction+voice+subtext+craft&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Publishing", "url": f"https://export.arxiv.org/api/query?search_query=publishing+industry+literary+agent+manuscript+query&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Genre_Fiction", "url": f"https://export.arxiv.org/api/query?search_query=genre+fiction+thriller+mystery+romance+market&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Prose_Style", "url": f"https://export.arxiv.org/api/query?search_query=prose+style+literary+fiction+voice+technique&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_World_Building", "url": f"https://export.arxiv.org/api/query?search_query=world+building+speculative+fiction+mythology+lore&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+        T("Poe_Tales", "https://www.gutenberg.org/cache/epub/2147/pg2147.txt"),
+        T("Lovecraft_Cthulhu", "https://www.gutenberg.org/cache/epub/68595/pg68595.txt"),
+        T("Stoker_Dracula", "https://www.gutenberg.org/cache/epub/345/pg345.txt"),
+        T("Shelley_Frankenstein", "https://www.gutenberg.org/cache/epub/84/pg84.txt"),
+        T("Doyle_Sherlock", "https://www.gutenberg.org/cache/epub/1661/pg1661.txt"),
+        T("Strunk_White", "https://www.gutenberg.org/cache/epub/37134/pg37134.txt"),
+        T("Aristotle_Poetics", "https://www.gutenberg.org/cache/epub/1974/pg1974.txt"),
+        A("Narrative_Structure", "narrative structure three act hero journey Campbell"),
+        A("Character_Development", "character development arc motivation protagonist"),
+        A("Supernatural_Horror_Craft", "supernatural horror gothic fiction craft technique"),
+        A("Dialogue_Subtext", "dialogue subtext voice character fiction craft"),
+        A("Publishing_Industry", "publishing industry literary agent query manuscript"),
+        A("Genre_Fiction_Market", "genre fiction thriller mystery romance market"),
+        A("Prose_Style_Voice", "prose style literary voice technique fiction"),
+        A("World_Building", "world building speculative fiction mythology lore"),
+        A("Mystery_Thriller_Craft", "mystery thriller suspense craft plot structure"),
+        A("Paranormal_Supernatural", "paranormal supernatural fiction research craft"),
+        A("Memoir_Personal_Narrative", "memoir personal narrative creative nonfiction craft"),
+        A("Revision_Editing", "revision editing manuscript feedback craft"),
+        A("Pacing_Tension", "pacing tension narrative structure suspense fiction"),
     ],
 
-    # ── HISTORY ──────────────────────────────────────────────────
-    "history": [
-        {"name": "US_Constitution", "url": "https://www.gutenberg.org/cache/epub/5/pg5.txt", "type": "text"},
-        {"name": "Declaration_Independence", "url": "https://www.gutenberg.org/cache/epub/1/pg1.txt", "type": "text"},
-        {"name": "Sun_Tzu_Art_of_War", "url": "https://www.gutenberg.org/cache/epub/132/pg132.txt", "type": "text"},
-        {"name": "Machiavelli_Prince", "url": "https://www.gutenberg.org/cache/epub/1232/pg1232.txt", "type": "text"},
-        {"name": "Caesar_Gallic_Wars", "url": "https://www.gutenberg.org/cache/epub/10657/pg10657.txt", "type": "text"},
-        {"name": "Herodotus_Histories", "url": "https://www.gutenberg.org/cache/epub/2707/pg2707.txt", "type": "text"},
-        {"name": "Thucydides_Peloponnesian_War", "url": "https://www.gutenberg.org/cache/epub/7142/pg7142.txt", "type": "text"},
-        {"name": "Clausewitz_On_War", "url": "https://www.gutenberg.org/cache/epub/1946/pg1946.txt", "type": "text"},
-        {"name": "ArXiv_Military_Strategy", "url": f"https://export.arxiv.org/api/query?search_query=military+strategy+doctrine+warfare+history&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Afghan_Iraq_Wars", "url": f"https://export.arxiv.org/api/query?search_query=Afghanistan+Iraq+war+counterinsurgency+COIN+veteran&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Cold_War", "url": f"https://export.arxiv.org/api/query?search_query=Cold+War+nuclear+deterrence+intelligence+CIA&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_American_History", "url": f"https://export.arxiv.org/api/query?search_query=American+history+civil+rights+constitution+democracy&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── POETRY ────────────────────────────────────────────────────
+    "poetry": [
+        T("Rumi_Masnavi", "https://www.gutenberg.org/files/57438/57438-0.txt"),
+        T("Whitman_Leaves_Grass", "https://www.gutenberg.org/files/1322/1322-0.txt"),
+        T("Dickinson_Poems", "https://www.gutenberg.org/files/12242/12242-0.txt"),
+        T("Shakespeare_Sonnets", "https://www.gutenberg.org/files/1041/1041-0.txt"),
+        T("Gibran_Prophet", "https://www.gutenberg.org/files/58585/58585-0.txt"),
+        T("Dante_Divine_Comedy", "https://www.gutenberg.org/files/8800/8800-0.txt"),
+        T("Blake_Songs", "https://www.gutenberg.org/cache/epub/574/pg574.txt"),
+        T("Keats_Poems", "https://www.gutenberg.org/cache/epub/2490/pg2490.txt"),
+        T("Shakespeare_Hamlet", "https://www.gutenberg.org/cache/epub/1524/pg1524.txt"),
+        T("Frost_Poems", "https://www.gutenberg.org/cache/epub/59824/pg59824.txt"),
+        A("Langston_Hughes", "Langston Hughes Harlem Renaissance poetry analysis"),
+        A("HipHop_as_Poetry", "hip hop poetry spoken word artistic literary analysis"),
+        A("African_Poetry", "African poetry oral tradition Yoruba Swahili literature"),
+        A("Sufi_Poetry_Rumi", "Sufi poetry Rumi Hafiz Kabir mystical verse"),
+        A("Spoken_Word_Slam", "spoken word slam poetry performance technique"),
+        A("Poetry_Craft_Form", "poetry craft form meter sonnet free verse technique"),
+        A("Indigenous_Poetry", "indigenous poetry Native American oral tradition verse"),
+        A("Harlem_Renaissance", "Harlem Renaissance poetry literature cultural movement"),
     ],
 
-    # ── TOOLS (SECURITY) ─────────────────────────────────────────
+    # ── CERTIFICATIONS ────────────────────────────────────────────
+    "certifications": [
+        # CompTIA
+        A("CompTIA_Security_Plus", "CompTIA Security+ exam domains cybersecurity fundamentals"),
+        A("CompTIA_Network_Plus", "CompTIA Network+ networking protocols TCP IP exam"),
+        A("CompTIA_A_Plus", "CompTIA A+ hardware software troubleshooting exam"),
+        A("CompTIA_CySA_Plus", "CompTIA CySA+ cybersecurity analyst threat detection"),
+        A("CompTIA_Pentest_Plus", "CompTIA PenTest+ penetration testing methodology exam"),
+        A("CompTIA_CASP_Plus", "CompTIA CASP+ advanced security practitioner enterprise"),
+        A("CompTIA_Linux_Plus", "CompTIA Linux+ system administration exam"),
+        A("CompTIA_Cloud_Plus", "CompTIA Cloud+ cloud infrastructure security"),
+        # ISC2
+        A("CISSP_Domains", "CISSP domains security management architecture exam"),
+        A("CISSP_Access_Control", "CISSP access control authentication identity management"),
+        A("CISSP_Cryptography", "CISSP cryptography PKI certificate management"),
+        A("CISSP_Network_Security", "CISSP network security architecture firewall VPN"),
+        A("ISC2_SSCP", "SSCP systems security certified practitioner ISC2"),
+        A("ISC2_CCSP", "CCSP cloud security professional ISC2 certification"),
+        A("ISC2_CSSLP", "CSSLP certified secure software lifecycle professional"),
+        # ISACA
+        A("CISM_Domains", "CISM certified information security manager ISACA domains"),
+        A("CISA_Auditing", "CISA certified information systems auditor audit"),
+        A("CRISC_Risk", "CRISC risk information systems control ISACA"),
+        # EC-Council
+        A("CEH_Ethical_Hacking", "CEH certified ethical hacker EC-Council exam"),
+        A("CHFI_Forensics", "CHFI computer hacking forensic investigator EC-Council"),
+        A("CPENT_Pentest", "CPENT certified penetration testing professional"),
+        A("ECSA_Security_Analyst", "ECSA EC-Council security analyst methodology"),
+        # GIAC / SANS
+        A("GSEC_Security", "GSEC GIAC security essentials certification SANS"),
+        A("GPEN_Pentest", "GPEN GIAC penetration tester certification"),
+        A("GCIH_Incident_Handler", "GCIH GIAC certified incident handler response"),
+        A("GWAPT_Web_App", "GWAPT web application penetration testing GIAC"),
+        A("GREM_Malware", "GREM reverse engineering malware GIAC analyst"),
+        # Wireless / 5G / 6G
+        A("5G_Security_Fundamentals", "5G network security architecture 3GPP standards"),
+        A("5G_Red_Team", "5G network red team penetration testing attack"),
+        A("6G_Security_Research", "6G network security resilience future wireless"),
+        A("Spectrum_Monitoring", "spectrum monitoring security RF signal 5G 6G"),
+        A("Wireless_Security_Certs", "wireless security CWSP certified wireless professional"),
+        # Cloud and Container
+        A("AWS_Security_Cert", "AWS certified security specialty cloud exam"),
+        A("Azure_Security_Cert", "Azure security engineer associate certification Microsoft"),
+        A("Container_Security_Cert", "container security Docker Kubernetes CKS certification"),
+        A("DevSecOps_Cert", "DevSecOps certification secure development pipeline"),
+        # Network
+        A("CCNA_Networking", "CCNA Cisco networking routing switching certification"),
+        A("CCNP_Security", "CCNP security Cisco advanced networking certification"),
+        # Access Control and PKI
+        A("Access_Control_IAM", "access control identity management IAM RBAC ABAC"),
+        A("PKI_Certificate_Mgmt", "PKI public key infrastructure certificate authority TLS"),
+        A("Authentication_MFA", "authentication multifactor MFA biometric zero trust"),
+        A("Privileged_Access_Mgmt", "privileged access management PAM CyberArk BeyondTrust"),
+        # Study Methodology
+        A("Certification_Study_Methods", "certification exam study methodology practice test"),
+        A("Security_Cert_Roadmap", "cybersecurity certification roadmap career path"),
+    ],
+
+    # ── TOOLS ────────────────────────────────────────────────────
     "tools": [
-        {"name": "Nmap_Reference", "url": "https://raw.githubusercontent.com/nmap/nmap/master/docs/nmap.usage.txt", "type": "text"},
-        {"name": "Metasploit_README", "url": "https://raw.githubusercontent.com/rapid7/metasploit-framework/master/README.md", "type": "text"},
-        {"name": "SQLMap_Docs", "url": "https://raw.githubusercontent.com/sqlmapproject/sqlmap/master/README.md", "type": "text"},
-        {"name": "Aircrack_Docs", "url": "https://raw.githubusercontent.com/aircrack-ng/aircrack-ng/master/README.md", "type": "text"},
-        {"name": "John_Ripper", "url": "https://raw.githubusercontent.com/openwall/john/bleeding-jumbo/doc/README", "type": "text"},
-        {"name": "Hashcat_Docs", "url": "https://raw.githubusercontent.com/hashcat/hashcat/master/README.md", "type": "text"},
-        {"name": "Hydra_Docs", "url": "https://raw.githubusercontent.com/vanhauser-thc/thc-hydra/master/README.md", "type": "text"},
-        {"name": "Nikto_Docs", "url": "https://raw.githubusercontent.com/sullo/nikto/master/README.md", "type": "text"},
-        {"name": "Gobuster_Docs", "url": "https://raw.githubusercontent.com/OJ/gobuster/master/README.md", "type": "text"},
-        {"name": "Ffuf_Docs", "url": "https://raw.githubusercontent.com/ffuf/ffuf/master/README.md", "type": "text"},
-        {"name": "Impacket_Docs", "url": "https://raw.githubusercontent.com/fortra/impacket/master/README.md", "type": "text"},
-        {"name": "Scapy_Docs", "url": "https://raw.githubusercontent.com/secdev/scapy/master/README.rst", "type": "text"},
-        {"name": "Wireshark_README", "url": "https://raw.githubusercontent.com/wireshark/wireshark/master/README.md", "type": "text"},
-        {"name": "Burp_Suite_README", "url": "https://raw.githubusercontent.com/PortSwigger/burp-extensions-montoya-api/main/README.md", "type": "text"},
-        {"name": "SecLists_README", "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/master/README.md", "type": "text"},
-        {"name": "PayloadsAllTheThings", "url": "https://raw.githubusercontent.com/swisskyrepo/PayloadsAllTheThings/master/README.md", "type": "text"},
-        {"name": "PWNDBG_README", "url": "https://raw.githubusercontent.com/pwndbg/pwndbg/dev/README.md", "type": "text"},
-        {"name": "Sigma_README", "url": "https://raw.githubusercontent.com/SigmaHQ/sigma/master/README.md", "type": "text"},
-        {"name": "ArXiv_Pentesting_Automation", "url": f"https://export.arxiv.org/api/query?search_query=penetration+testing+automation+tools+methodology&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Exploit_Dev", "url": f"https://export.arxiv.org/api/query?search_query=exploit+development+buffer+overflow+ROP+shellcode&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Wireless_Attacks", "url": f"https://export.arxiv.org/api/query?search_query=wireless+attack+WiFi+Bluetooth+RF+security&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+        T("Nmap_Reference", "https://raw.githubusercontent.com/nmap/nmap/master/docs/nmap.usage.txt"),
+        T("Metasploit_README", "https://raw.githubusercontent.com/rapid7/metasploit-framework/master/README.md"),
+        T("SQLMap_Docs", "https://raw.githubusercontent.com/sqlmapproject/sqlmap/master/README.md"),
+        T("Hashcat_Docs", "https://raw.githubusercontent.com/hashcat/hashcat/master/README.md"),
+        T("Hydra_Docs", "https://raw.githubusercontent.com/vanhauser-thc/thc-hydra/master/README.md"),
+        T("Nikto_Docs", "https://raw.githubusercontent.com/sullo/nikto/master/README.md"),
+        T("Gobuster_Docs", "https://raw.githubusercontent.com/OJ/gobuster/master/README.md"),
+        T("Impacket_Docs", "https://raw.githubusercontent.com/fortra/impacket/master/README.md"),
+        T("SecLists_README", "https://raw.githubusercontent.com/danielmiessler/SecLists/master/README.md"),
+        T("OWASP_WSTG", "https://raw.githubusercontent.com/OWASP/wstg/master/document/README.md"),
+        A("Pentesting_Tools", "penetration testing tools automation methodology"),
+        A("Exploit_Dev_Tools", "exploit development tools GDB pwndbg pwntools"),
+        A("Wireless_Security_Tools", "wireless security tools aircrack hashcat WiFi"),
+        A("Forensics_Tools", "digital forensics tools Volatility Autopsy FTK"),
+        A("OSINT_Tools", "OSINT open source intelligence Maltego Shodan Recon-ng"),
+    ],
+
+    # ── NISABA SOUL ───────────────────────────────────────────────
+    "nisaba_soul": [
+        A("AI_Alignment_Values", "AI alignment values safety beneficial AGI"),
+        A("AI_Identity_Persona", "AI personality character identity language model"),
+        A("LLM_Memory_RAG", "LLM memory retrieval augmented generation vector"),
+        A("Sumerian_Nisaba", "Sumerian civilization Nisaba goddess writing wisdom"),
+        A("AI_Human_Trust", "AI trust human machine collaboration relationship"),
+        A("Conversational_AI", "conversational AI dialogue persona design"),
+        A("Explainable_AI", "explainable AI XAI interpretability transparency"),
+        A("AI_Consciousness", "AI consciousness sentience philosophy mind"),
+        A("Human_AI_Collab", "human AI collaboration augmentation partnership"),
+    ],
+
+    # ── GENERAL ───────────────────────────────────────────────────
+    "general": [
+        A("General_AI_Survey", "cat:cs.AI"),
+        A("LLM_Capabilities", "large language model capabilities survey benchmark"),
+        A("Future_Technology", "emerging technology future society impact"),
+        A("Interdisciplinary_Research", "interdisciplinary research cross domain innovation"),
+    ],
+
+    # ── FINANCES ─────────────────────────────────────────────────
+    "finances": [
+        # Trading Strategies
+        A("Technical_Analysis_Trading", "technical analysis chart patterns candlestick indicators trading"),
+        A("Fundamental_Analysis", "fundamental analysis valuation DCF earnings stock"),
+        A("Algorithmic_Trading", "algorithmic trading quantitative strategy backtesting"),
+        A("Options_Derivatives", "options trading derivatives strategies Greeks risk"),
+        A("Day_Trading_Swing", "day trading swing trading momentum strategies"),
+        A("Forex_Currency_Trading", "forex currency trading strategy analysis"),
+        A("Crypto_Trading_Strategy", "cryptocurrency trading strategy Bitcoin altcoin DeFi"),
+        A("Risk_Management_Trading", "risk management position sizing stop loss portfolio"),
+        A("Market_Microstructure", "market microstructure order flow liquidity execution"),
+        A("Behavioral_Finance", "behavioral finance investor psychology bias market"),
+        # Investment
+        A("Value_Investing", "value investing Graham Buffett intrinsic value margin safety"),
+        A("Growth_Investing", "growth investing momentum factor returns"),
+        A("Portfolio_Theory", "modern portfolio theory Markowitz Sharpe ratio diversification"),
+        A("ETF_Index_Investing", "ETF index fund passive investing Bogle"),
+        A("Real_Estate_Investing", "real estate investing rental REIT cash flow"),
+        A("Alternative_Investments", "alternative investments hedge fund private equity venture"),
+        A("Dividend_Investing", "dividend investing income yield strategy"),
+        # Savings and Wealth Building
+        A("Personal_Finance_Deep", "personal finance budgeting savings emergency fund"),
+        A("Retirement_Planning", "retirement planning 401k IRA Roth compound interest"),
+        A("Tax_Optimization", "tax optimization strategy deductions harvesting"),
+        A("Financial_Independence", "financial independence FIRE early retirement savings"),
+        A("Wealth_Building_Strategy", "wealth building strategy net worth accumulation"),
+        # Macroeconomics
+        A("Macroeconomics_Deep", "macroeconomics GDP inflation monetary fiscal policy"),
+        A("Federal_Reserve_Policy", "Federal Reserve monetary policy interest rates QE"),
+        A("Inflation_Deflation", "inflation deflation CPI purchasing power hedging"),
+        A("Economic_Cycles", "economic cycles recession expansion bull bear market"),
+        A("Global_Economy_Trends", "global economy trends emerging markets geopolitics"),
+        A("Microeconomics", "microeconomics supply demand price elasticity market"),
+        A("Behavioral_Economics", "behavioral economics Kahneman Thaler nudge theory"),
+        # Current Trends - Multiple Perspectives
+        A("AI_Economy_Impact", "artificial intelligence economy jobs productivity disruption"),
+        A("Deglobalization_Trends", "deglobalization supply chain reshoring geopolitical risk"),
+        A("Energy_Transition_Finance", "energy transition renewable finance ESG investing"),
+        A("Digital_Currency_CBDC", "central bank digital currency CBDC Bitcoin gold"),
+        A("Debt_Crisis_Analysis", "national debt crisis fiscal sustainability analysis"),
+        A("Market_Outlook_2025", "market outlook 2025 2026 equity bonds forecast"),
+        A("Geopolitical_Risk_Finance", "geopolitical risk finance markets war sanctions"),
+        A("Crypto_Regulation", "cryptocurrency regulation SEC policy institutional adoption"),
     ],
 
     # ── RESUME / CAREER ───────────────────────────────────────────
     "resume_career": [
-        {"name": "ArXiv_AI_Security_Jobs", "url": f"https://export.arxiv.org/api/query?search_query=AI+security+career+skills+workforce+hiring&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Defense_Contractor_Careers", "url": f"https://export.arxiv.org/api/query?search_query=defense+contractor+Leidos+SAIC+Booz+Allen+careers&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Veteran_Tech_Transition", "url": f"https://export.arxiv.org/api/query?search_query=veteran+technology+career+transition+military+civilian&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Technical_Interview", "url": f"https://export.arxiv.org/api/query?search_query=technical+interview+software+engineering+security+hiring&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Portfolio_Building", "url": f"https://export.arxiv.org/api/query?search_query=technical+portfolio+github+projects+showcase+hiring&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Salary_Negotiation", "url": f"https://export.arxiv.org/api/query?search_query=salary+negotiation+compensation+technology+career&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Security_Clearance_Career", "url": f"https://export.arxiv.org/api/query?search_query=security+clearance+career+cleared+professional+DoD&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+        A("AI_Security_Jobs", "AI security career skills workforce demand"),
+        A("Defense_Contractor_Jobs", "defense contractor Leidos SAIC Booz Allen careers"),
+        A("Veteran_Tech_Transition", "veteran technology career transition military civilian"),
+        A("Technical_Interview", "technical interview software security engineering hiring"),
+        A("Portfolio_Building", "technical portfolio GitHub projects showcase"),
+        A("Salary_Negotiation", "salary negotiation compensation technology career"),
+        A("Security_Clearance_Career", "security clearance career cleared professional DoD"),
+        A("Networking_Career", "professional networking career advancement strategy"),
+        A("Personal_Branding", "personal branding thought leadership LinkedIn career"),
     ],
 
-    # ── POETRY ───────────────────────────────────────────────────
-    "poetry": [
-        {"name": "Rumi_Masnavi", "url": "https://www.gutenberg.org/files/57438/57438-0.txt", "type": "text"},
-        {"name": "Whitman_Leaves_of_Grass", "url": "https://www.gutenberg.org/files/1322/1322-0.txt", "type": "text"},
-        {"name": "Dickinson_Poems", "url": "https://www.gutenberg.org/files/12242/12242-0.txt", "type": "text"},
-        {"name": "Shakespeare_Sonnets", "url": "https://www.gutenberg.org/files/1041/1041-0.txt", "type": "text"},
-        {"name": "Gibran_Prophet", "url": "https://www.gutenberg.org/files/58585/58585-0.txt", "type": "text"},
-        {"name": "Dante_Divine_Comedy", "url": "https://www.gutenberg.org/files/8800/8800-0.txt", "type": "text"},
-        {"name": "Blake_Songs", "url": "https://www.gutenberg.org/cache/epub/574/pg574.txt", "type": "text"},
-        {"name": "Keats_Poems", "url": "https://www.gutenberg.org/cache/epub/2490/pg2490.txt", "type": "text"},
-        {"name": "Shakespeare_Hamlet", "url": "https://www.gutenberg.org/cache/epub/1524/pg1524.txt", "type": "text"},
-        {"name": "Shakespeare_Macbeth", "url": "https://www.gutenberg.org/cache/epub/1533/pg1533.txt", "type": "text"},
-        {"name": "Frost_Poems", "url": "https://www.gutenberg.org/cache/epub/59824/pg59824.txt", "type": "text"},
-        {"name": "Eliot_Wasteland", "url": "https://www.gutenberg.org/cache/epub/1321/pg1321.txt", "type": "text"},
-        {"name": "Langston_Hughes_Analysis", "url": f"https://export.arxiv.org/api/query?search_query=Langston+Hughes+Harlem+Renaissance+poetry+analysis&max_results=50&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Hip_Hop_Poetry", "url": f"https://export.arxiv.org/api/query?search_query=hip+hop+as+poetry+spoken+word+artistic+analysis&max_results=50&sortBy=submittedDate", "type": "arxiv"},
+    # ── GARDENING ────────────────────────────────────────────────
+    "gardening": [
+        T("Henderson_Gardening", "https://www.gutenberg.org/cache/epub/43500/pg43500.txt"),
+        # Zone 7B Specific
+        A("Zone7B_Planting_Guide", "USDA zone 7B planting guide frost dates vegetables"),
+        A("Zone7B_Alabama", "Alabama zone 7B gardening climate Southeast vegetables"),
+        A("Zone7B_Perennials", "zone 7B perennial plants hardy climate Southeast"),
+        A("Zone7B_Winter_Garden", "zone 7B winter garden cool season crops frost"),
+        A("Southeast_Vegetable_Garden", "Southeast vegetable gardening heat humidity summer"),
+        A("Heat_Tolerant_Plants", "heat tolerant plants vegetables Southeast summer"),
+        # Edible Gardens
+        A("Edible_Landscape_Design", "edible landscape design food garden aesthetics"),
+        A("Vegetable_Garden_Planning", "vegetable garden planning layout spacing companion"),
+        A("Herb_Garden_Culinary", "herb garden culinary cooking medicinal growing"),
+        A("Fruit_Trees_Southeast", "fruit trees Southeast zone 7 apple peach fig"),
+        A("Berry_Growing", "berry growing blueberry strawberry blackberry cultivation"),
+        A("Root_Vegetables", "root vegetables carrots beets turnips growing"),
+        A("Tomato_Pepper_Growing", "tomato pepper eggplant nightshade growing care"),
+        A("Leafy_Greens_Season", "leafy greens kale collards lettuce season extension"),
+        A("Squash_Melon_Cucumber", "squash melon cucumber vine vegetables growing"),
+        # Flowers
+        A("Native_Flowers_Southeast", "native flowers Southeast wildflowers pollinator garden"),
+        A("Cut_Flower_Garden", "cut flower garden design growing harvest"),
+        A("Perennial_Flower_Design", "perennial flower garden design color season bloom"),
+        A("Annual_Flowers_Summer", "annual flowers summer heat color bedding plants"),
+        A("Bulb_Growing", "bulb growing spring tulip daffodil dahlia seasonal"),
+        A("Rose_Growing_Care", "rose growing care pruning disease resistant varieties"),
+        A("Pollinator_Garden", "pollinator garden bee butterfly habitat native plants"),
+        # Greenhouse
+        A("Greenhouse_Building", "greenhouse building construction design materials"),
+        A("Greenhouse_Management", "greenhouse management temperature humidity ventilation"),
+        A("Season_Extension_Greenhouse", "season extension greenhouse cold frame hoop house"),
+        A("Greenhouse_Hydroponics", "greenhouse hydroponics aquaponics growing systems"),
+        A("Small_Greenhouse_Home", "small home greenhouse backyard DIY construction"),
+        # Plant Care
+        A("Plant_Disease_ID", "plant disease identification treatment fungal bacterial"),
+        A("Soil_Amendment_Fertility", "soil amendment fertility composting organic matter"),
+        A("Watering_Irrigation", "plant watering irrigation drip system schedule"),
+        A("Pruning_Techniques", "pruning techniques trees shrubs timing method"),
+        A("Transplanting_Propagation", "transplanting propagation cuttings division seed"),
+        A("Plant_Nutrient_Deficiency", "plant nutrient deficiency identification treatment"),
+        A("Organic_Pest_Control", "organic pest control beneficial insects companion plants"),
+        A("Mycorrhizal_Fungi", "mycorrhizal fungi soil biology plant symbiosis"),
+        A("Composting_Deep", "composting methods hot cold vermicomposting ratio"),
+        A("Raised_Bed_Construction", "raised bed construction materials soil mix depth"),
+        A("Seed_Starting_Indoors", "seed starting indoors timing light heat germination"),
+        A("Seed_Saving_Heirloom", "seed saving heirloom varieties open pollinated storage"),
+        A("Food_Forest_Design", "food forest agroforestry seven layers design"),
+        A("Permaculture_Zone7", "permaculture design Southeast zone 7 climate"),
+        A("Water_Harvesting", "water harvesting rain barrel swale conservation garden"),
+        A("Medicinal_Herb_Growing", "medicinal herbs growing harvesting drying storage"),
     ],
 
-    # ── GENERAL ──────────────────────────────────────────────────
-    "general": [
-        {"name": "ArXiv_General_AI", "url": f"https://export.arxiv.org/api/query?search_query=cat:cs.AI&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_LLM_Survey", "url": f"https://export.arxiv.org/api/query?search_query=large+language+model+survey+capabilities&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Robotics", "url": f"https://export.arxiv.org/api/query?search_query=cat:cs.RO&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
-        {"name": "ArXiv_Future_Tech", "url": f"https://export.arxiv.org/api/query?search_query=emerging+technology+future+society+impact&max_results={ARXIV_RESULTS}&sortBy=submittedDate", "type": "arxiv"},
+    # ── SURVIVAL ─────────────────────────────────────────────────
+    "survival": [
+        T("US_Army_Survival", "https://www.gutenberg.org/files/17007/17007-0.txt"),
+        T("Scouting_Handbook", "https://www.gutenberg.org/cache/epub/29558/pg29558.txt"),
+        A("Wilderness_Survival", "wilderness survival navigation shelter water food"),
+        A("Emergency_Preparedness", "emergency preparedness FEMA disaster readiness"),
+        A("Navigation_Orientation", "navigation land wilderness compass map terrain"),
+        A("Emergency_Medicine_Field", "emergency medicine field trauma first aid"),
+        A("Urban_Survival", "urban survival grid down SHTF preparedness"),
+        A("Water_Purification", "water purification filtration survival techniques"),
+        A("Fire_Starting", "fire starting primitive skills friction bow drill"),
+        A("Food_Foraging", "food foraging wild edibles plants identification"),
+    ],
+
+    # ── PROGRAMMING ──────────────────────────────────────────────
+    "programming": [
+        T("Python_Tutorial", "https://docs.python.org/3/tutorial/index.html"),
+        T("GNU_Bash", "https://www.gnu.org/software/bash/manual/bash.html"),
+        A("Python_Security", "Python security development libraries tools"),
+        A("JavaScript_React", "JavaScript React frontend development modern"),
+        A("API_Design", "REST API design FastAPI microservices architecture"),
+        A("Database_SQL", "database SQL PostgreSQL query optimization"),
+        A("ML_Implementation", "machine learning implementation PyTorch TensorFlow"),
+        A("Software_Architecture", "software architecture patterns design systems"),
+        A("DevOps_CI_CD", "DevOps CI CD deployment automation pipeline"),
+        A("Algorithms_DS", "algorithms data structures complexity analysis"),
+        A("Cybersecurity_Coding", "cybersecurity coding secure development OWASP"),
+        A("Signal_Processing_Code", "MATLAB Python signal processing implementation DSP"),
+    ],
+
+    # ── LOGIC / PARADOXES ─────────────────────────────────────────
+    "logic_puzzles": [
+        A("Logic_Foundations", "formal logic propositional predicate modal foundations"),
+        A("Game_Theory_Deep", "game theory Nash equilibrium strategy optimal"),
+        A("Paradoxes_Philosophy", "Zeno Liar Russell paradox philosophy logic"),
+        A("Fermi_Estimation", "Fermi estimation paradox problem solving"),
+        A("Cryptanalysis_Cipher", "cryptanalysis cipher breaking historical"),
+        A("Decision_Theory", "decision theory rational choice probability utility"),
+        A("Deductive_Reasoning", "deductive reasoning inference logic argumentation"),
+        T("Lewis_Carroll_Logic", "https://www.gutenberg.org/cache/epub/28696/pg28696.txt"),
+    ],
+
+    # ── WRITING CRAFT ────────────────────────────────────────────
+    "writing_craft": [
+        T("Strunk_White_Style", "https://www.gutenberg.org/cache/epub/37134/pg37134.txt"),
+        T("Aristotle_Poetics_Full", "https://www.gutenberg.org/cache/epub/1974/pg1974.txt"),
+        A("Writing_Style_Prose", "writing style prose craft technique voice"),
+        A("Technical_Writing", "technical writing documentation engineering report"),
+        A("Rhetoric_Persuasion", "rhetoric persuasive writing composition argument"),
+        A("Grammar_Linguistics", "grammar linguistics syntax English structure"),
+        A("Narrative_Voice", "narrative voice point of view perspective fiction"),
+        A("Editing_Revision_Process", "editing revision writing process manuscript"),
+        A("Publishing_Query", "publishing industry query letter agent submission"),
+        A("Metaphor_Language", "metaphor figurative language cognitive linguistics"),
+        A("Academic_Writing", "academic writing research paper structure citation"),
+    ],
+
+    # ── TECHNOLOGY DEEP ───────────────────────────────────────────
+    "technology": [
+        A("AI_ML_Survey", "cat:cs.AI"),
+        A("LLM_Architecture", "large language model architecture transformer attention"),
+        A("IoT_Security", "IoT internet of things security vulnerability"),
+        A("Cloud_Architecture", "cloud architecture AWS Azure GCP design"),
+        A("Container_Kubernetes", "Docker Kubernetes container orchestration"),
+        A("Hardware_Security", "hardware security side channel CPU architecture"),
+        A("5G_Network_Security", "5G network security vulnerability protocol"),
+        A("Firmware_Embedded", "firmware embedded systems security analysis"),
+        A("Quantum_Computing_Tech", "quantum computing technology qubit hardware"),
+        A("Robotics_Autonomy", "cat:cs.RO"),
+        A("Windows_Security", "Windows Active Directory security hardening"),
+        A("Linux_Kernel_Security", "Linux kernel security privilege escalation"),
+        A("macOS_Security", "macOS Apple silicon security vulnerability"),
+        A("Mobile_Security", "mobile iOS Android security vulnerability"),
+        A("SCADA_ICS_Security", "SCADA ICS industrial control security"),
+    ],
+
+    # ── RESEARCH METHODOLOGY ─────────────────────────────────────
+    "research": [
+        A("Research_Methods", "research methodology scientific method design"),
+        A("Technical_Writing_Research", "technical writing scientific paper documentation"),
+        A("Data_Analysis_Stats", "data analysis statistical methods research"),
+        A("Literature_Review", "systematic literature review methodology"),
+        A("Signal_Research_Methods", "signal processing research methods DSP"),
+        A("Interdisciplinary_Research", "interdisciplinary research cross domain"),
+        A("Patent_Research", "patent writing claims intellectual property"),
+        A("Grant_Writing", "grant writing proposal research funding"),
     ],
 }
 
-# ─── SCRAPING FUNCTIONS ───────────────────────────────────────────
+# ─── SCRAPING ENGINE ─────────────────────────────────────────────
 def load_state():
     if os.path.exists(SCRAPER_STATE):
         with open(SCRAPER_STATE) as f:
@@ -541,48 +961,79 @@ def url_hash(url):
 def save_document(domain, name, content, url):
     domain_path = os.path.join(SSD_BASE, domain)
     os.makedirs(domain_path, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d")
-    filename = f"{name}_{timestamp}.txt"
-    filepath = os.path.join(domain_path, filename)
-    with open(filepath, "w", encoding="utf-8", errors="ignore") as f:
+    ts = datetime.now().strftime("%Y%m%d")
+    fname = f"{name}_{ts}.txt"
+    fpath = os.path.join(domain_path, fname)
+    with open(fpath, "w", encoding="utf-8", errors="ignore") as f:
         f.write(f"Source: {url}\nScraped: {datetime.now().isoformat()}\n{'='*60}\n\n{content}")
-    size_kb = len(content) // 1024
-    print(f"    Saved: {filename} ({size_kb}KB)")
-    return filepath
+    print(f"    Saved: {fname} ({len(content)//1024}KB)")
+    return fpath
 
 def scrape_text(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip (done): {source['name']}")
+        print(f"    Skip: {source['name']}")
         return
     try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/2.0"}, timeout=30)
+        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=30)
         r.raise_for_status()
         save_document(domain, source["name"], r.text[:MAX_CONTENT], url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat()}
     except requests.HTTPError as e:
-        if e.response.status_code == 429:
+        code = e.response.status_code
+        if code == 429:
             print(f"    RATE LIMITED: {source['name']} — wait 5 min then resume")
         else:
-            print(f"    HTTP Error {e.response.status_code}: {source['name']}")
+            print(f"    HTTP {code}: {source['name']}")
     except Exception as e:
         print(f"    Error: {source['name']}: {e}")
+
+def fetch_pdf(domain, name, title, pdf_url, idx, state):
+    uid = url_hash(pdf_url)
+    if uid in state["scraped"]:
+        return
+    tmp = None
+    try:
+        r = requests.get(pdf_url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=60, stream=True)
+        r.raise_for_status()
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+            tmp = f.name
+        result = subprocess.run(["pdftotext", tmp, "-"], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and len(result.stdout) > 500:
+            clean = f"{name}_PDF{idx}_{title[:40].replace(' ','_').replace('/','')}"
+            save_document(domain, clean, result.stdout[:MAX_CONTENT], pdf_url)
+            state["scraped"][uid] = {"name": clean, "ts": datetime.now().isoformat(), "type": "pdf"}
+            print(f"    PDF: {title[:50]}")
+        if tmp:
+            os.unlink(tmp)
+    except subprocess.TimeoutExpired:
+        print(f"    PDF timeout: {title[:40]}")
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
+    except Exception as e:
+        print(f"    PDF err: {title[:40]}: {e}")
+        if tmp:
+            try: os.unlink(tmp)
+            except: pass
 
 def scrape_arxiv(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip (done): {source['name']}")
+        print(f"    Skip: {source['name']}")
         return
     try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/2.0"}, timeout=45)
+        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=45)
         r.raise_for_status()
         import xml.etree.ElementTree as ET
         root = ET.fromstring(r.text)
         ns = {"atom": "http://www.w3.org/2005/Atom"}
         entries = root.findall("atom:entry", ns)
-        content = f"ArXiv Papers: {source['name']}\nQuery: {url}\nPapers: {len(entries)}\n\n"
+        content = f"ArXiv: {source['name']}\nQuery: {url}\nPapers: {len(entries)}\n\n"
         pdf_urls = []
         for entry in entries:
             title = entry.find("atom:title", ns)
@@ -590,94 +1041,57 @@ def scrape_arxiv(source, domain, state):
             authors = entry.findall("atom:author", ns)
             published = entry.find("atom:published", ns)
             links = entry.findall("atom:link", ns)
-            if title is not None and summary is not None:
-                author_names = [a.find("atom:name", ns).text for a in authors[:3] if a.find("atom:name", ns) is not None]
-                pub_date = published.text[:10] if published is not None else ""
+            if title and summary:
+                names = [a.find("atom:name", ns).text for a in authors[:3] if a.find("atom:name", ns) is not None]
+                pub = published.text[:10] if published is not None else ""
                 content += f"Title: {title.text.strip()}\n"
-                content += f"Authors: {', '.join(author_names)}\n"
-                content += f"Published: {pub_date}\n"
+                content += f"Authors: {', '.join(names)}\nPublished: {pub}\n"
                 content += f"Abstract: {summary.text.strip()[:800]}\n\n"
-                # Collect PDF links for priority domains
                 if source.get("pdf") and domain in PDF_PRIORITY_DOMAINS:
-                    for link in links:
-                        if link.get("type") == "application/pdf":
-                            pdf_urls.append((title.text.strip()[:60], link.get("href")))
+                    for lnk in links:
+                        if lnk.get("type") == "application/pdf":
+                            pdf_urls.append((title.text.strip()[:60], lnk.get("href")))
         save_document(domain, source["name"], content, url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(entries)}
         print(f"    {len(entries)} abstracts")
-        # Fetch top 3 PDFs for priority domains
         if pdf_urls and source.get("pdf"):
-            for i, (title, pdf_url) in enumerate(pdf_urls[:3]):
+            for i, (title, purl) in enumerate(pdf_urls[:3]):
                 time.sleep(DELAY)
-                fetch_arxiv_pdf(domain, source["name"], title, pdf_url, i, state)
+                fetch_pdf(domain, source["name"], title, purl, i, state)
     except requests.HTTPError as e:
         if e.response.status_code == 429:
-            print(f"    RATE LIMITED — wait 5 min then resume from this domain")
+            print(f"    RATE LIMITED — wait 5 min")
         else:
-            print(f"    HTTP Error {e.response.status_code}: {source['name']}")
+            print(f"    HTTP {e.response.status_code}: {source['name']}")
     except Exception as e:
         print(f"    Error: {source['name']}: {e}")
-
-def fetch_arxiv_pdf(domain, source_name, title, pdf_url, idx, state):
-    uid = url_hash(pdf_url)
-    if uid in state["scraped"]:
-        return
-    try:
-        r = requests.get(pdf_url, headers={"User-Agent": "NISA-Knowledge-Bot/2.0"}, timeout=60, stream=True)
-        r.raise_for_status()
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-            for chunk in r.iter_content(8192):
-                f.write(chunk)
-            tmp = f.name
-        # Try pdftotext first, fall back to strings
-        result = subprocess.run(["pdftotext", tmp, "-"], capture_output=True, text=True, timeout=30)
-        if result.returncode == 0 and len(result.stdout) > 500:
-            text = result.stdout[:MAX_CONTENT]
-            clean_name = f"{source_name}_FULLTEXT_{idx}_{title[:40].replace(' ','_').replace('/','')}"
-            save_document(domain, clean_name, text, pdf_url)
-            state["scraped"][uid] = {"name": clean_name, "ts": datetime.now().isoformat(), "type": "pdf_fulltext"}
-            print(f"    PDF full-text: {title[:50]}...")
-        os.unlink(tmp)
-    except subprocess.TimeoutExpired:
-        print(f"    PDF timeout: {title[:40]}")
-        try: os.unlink(tmp)
-        except: pass
-    except Exception as e:
-        print(f"    PDF error: {title[:40]}: {e}")
-        try: os.unlink(tmp)
-        except: pass
 
 def scrape_nvd(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip (done): {source['name']}")
+        print(f"    Skip: {source['name']}")
         return
     try:
-        headers = {"User-Agent": "NISA-Knowledge-Bot/2.0"}
-        nvd_key = os.environ.get("NVD_API_KEY", "")
-        if nvd_key:
-            headers["apiKey"] = nvd_key
+        headers = {"User-Agent": "NISA-Knowledge-Bot/3.0"}
+        key = os.environ.get("NVD_API_KEY", "")
+        if key:
+            headers["apiKey"] = key
         r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
-        data = r.json()
-        vulns = data.get("vulnerabilities", [])
+        vulns = r.json().get("vulnerabilities", [])
         content = f"NIST NVD CVE Database\nSource: {url}\n\n"
         for v in vulns:
             cve = v.get("cve", {})
             cid = cve.get("id", "")
             desc = next((d["value"] for d in cve.get("descriptions", []) if d["lang"] == "en"), "")
-            metrics = cve.get("metrics", {})
-            cvss31 = metrics.get("cvssMetricV31", [{}])[0].get("cvssData", {})
-            cvss30 = metrics.get("cvssMetricV30", [{}])[0].get("cvssData", {})
-            cvss = cvss31 if cvss31 else cvss30
-            refs = [r.get("url","") for r in cve.get("references", [])[:3]]
-            content += f"CVE: {cid}\n"
-            content += f"Severity: {cvss.get('baseSeverity','N/A')} | Score: {cvss.get('baseScore','N/A')}\n"
-            content += f"Vector: {cvss.get('vectorString','N/A')}\n"
-            content += f"Description: {desc[:400]}\n"
+            m = cve.get("metrics", {})
+            cvss = m.get("cvssMetricV31", [{}])[0].get("cvssData", {}) or m.get("cvssMetricV30", [{}])[0].get("cvssData", {})
+            refs = [x.get("url", "") for x in cve.get("references", [])[:2]]
+            content += f"CVE: {cid}\nSeverity: {cvss.get('baseSeverity','N/A')} | Score: {cvss.get('baseScore','N/A')}\n"
+            content += f"Vector: {cvss.get('vectorString','N/A')}\nDescription: {desc[:400]}\n"
             if refs:
-                content += f"References: {' | '.join(refs[:2])}\n"
+                content += f"Refs: {' | '.join(refs)}\n"
             content += "\n"
         save_document(domain, source["name"], content, url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(vulns)}
@@ -686,7 +1100,7 @@ def scrape_nvd(source, domain, state):
         if e.response.status_code == 429:
             print(f"    NVD RATE LIMITED — wait 30 sec (or get free API key at nvd.nist.gov)")
         else:
-            print(f"    HTTP Error {e.response.status_code}: {source['name']}")
+            print(f"    HTTP {e.response.status_code}: {source['name']}")
     except Exception as e:
         print(f"    Error: {source['name']}: {e}")
 
@@ -694,33 +1108,31 @@ def scrape_mitre(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip (done): {source['name']}")
+        print(f"    Skip: {source['name']}")
         return
     try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/2.0"}, timeout=90)
+        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=90)
         r.raise_for_status()
         data = r.json()
         techniques = [o for o in data.get("objects", []) if o.get("type") == "attack-pattern"]
-        content = f"MITRE ATT&CK - {source['name']}\nTotal techniques: {len(techniques)}\n\n"
+        content = f"MITRE ATT&CK - {source['name']}\nTotal: {len(techniques)}\n\n"
         for t in techniques[:200]:
-            phases = [k.get("phase_name","") for k in t.get("kill_chain_phases", [])]
-            tid = next((er.get("external_id","") for er in t.get("external_references",[]) if er.get("source_name")=="mitre-attack"), "")
-            content += f"ID: {tid} | Name: {t.get('name','')}\n"
+            phases = [k.get("phase_name", "") for k in t.get("kill_chain_phases", [])]
+            tid = next((e.get("external_id", "") for e in t.get("external_references", []) if e.get("source_name") == "mitre-attack"), "")
+            content += f"ID: {tid} | Name: {t.get('name', '')}\n"
             content += f"Tactics: {', '.join(phases)}\n"
-            content += f"Description: {t.get('description','')[:600]}\n\n"
+            content += f"Description: {t.get('description', '')[:600]}\n\n"
         save_document(domain, source["name"], content, url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(techniques)}
-        print(f"    {len(techniques)} ATT&CK techniques")
+        print(f"    {len(techniques)} techniques")
     except Exception as e:
         print(f"    Error: {source['name']}: {e}")
 
-# ─── MAIN ─────────────────────────────────────────────────────────
 def run_scraper(domains=None, force=False):
     print("=" * 60)
-    print("  NISA Knowledge Scraper v2.0")
+    print("  NISA Knowledge Scraper v3.0")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  ArXiv results per query: {ARXIV_RESULTS}")
-    print(f"  PDF full-text enabled for: {PDF_PRIORITY_DOMAINS}")
+    print(f"  ArXiv per query: {AR} | PDF domains: {PDF_PRIORITY_DOMAINS}")
     print("=" * 60)
 
     state = load_state()
@@ -739,23 +1151,24 @@ def run_scraper(domains=None, force=False):
         "pdf": scrape_text,
     }
 
-    target_domains = domains or list(SOURCES.keys())
-    total_sources = sum(len(SOURCES[d]) for d in target_domains if d in SOURCES)
+    target = domains or list(SOURCES.keys())
+    total = sum(len(SOURCES[d]) for d in target if d in SOURCES)
     done = 0
 
-    for domain in target_domains:
+    for domain in target:
         if domain not in SOURCES:
             print(f"Unknown domain: {domain}")
             continue
-        print(f"\n[{domain.upper()}] ({len(SOURCES[domain])} sources)")
-        for source in SOURCES[domain]:
+        sources = SOURCES[domain]
+        print(f"\n[{domain.upper()}] ({len(sources)} sources)")
+        for source in sources:
             done += 1
-            print(f"  [{done}/{total_sources}] {source['name']}")
+            print(f"  [{done}/{total}] {source['name']}")
             fn = dispatch.get(source["type"], scrape_text)
             fn(source, domain, state)
             time.sleep(DELAY)
         save_state(state)
-        print(f"  State saved. Total scraped: {len(state['scraped'])}")
+        print(f"  Saved. Total: {len(state['scraped'])}")
 
     save_state(state)
     print(f"\n{'='*60}")
