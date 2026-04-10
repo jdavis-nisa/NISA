@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom"
-import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play, Server, Bell } from "lucide-react"
+import { MessageSquare, Shield, FileText, Activity, Search, Brain, Crosshair, BarChart2, Play, Server, Bell, Map } from "lucide-react"
 import { onNewContext } from "./SessionContext"
 import Chat from "./components/Chat"
 import Security from "./components/Security"
@@ -18,6 +18,7 @@ import AdversarialSim from './components/AdversarialSim'
 import Playbook from './components/Playbook'
 import AssetInventory from './components/AssetInventory'
 import CVEWatchlist from './components/CVEWatchlist'
+import AttackSurface from './components/AttackSurface'
 import NisabaOrb from './components/NisabaOrb'
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
               <Route path="/playbook" element={<Playbook />} />
               <Route path="/assets" element={<AssetInventory />} />
               <Route path="/watchlist" element={<CVEWatchlist />} />
+              <Route path="/attacksurface" element={<AttackSurface />} />
             </Routes>
           </main>
         </div>
@@ -190,6 +192,7 @@ function Sidebar() {
     { to: "/playbook", icon: Play, label: "PLAYBOOK", sublabel: "Automated Workflows" },
     { to: "/assets", icon: Server, label: "ASSETS", sublabel: "Asset Inventory" },
     { to: "/watchlist", icon: Bell, label: "WATCHLIST", sublabel: "CVE Monitoring" },
+    { to: "/attacksurface", icon: Map, label: "ATTACK SURFACE", sublabel: "Exposure Map" },
   ]
   return (
     <nav style={{
