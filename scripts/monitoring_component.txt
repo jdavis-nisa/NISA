@@ -1,0 +1,6 @@
+mmunity Edition requires manual operation via the GUI.
+        </div>
+      </div>
+    </div>
+  )
+}

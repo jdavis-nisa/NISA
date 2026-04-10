@@ -35,6 +35,7 @@ lsof -ti:8095 | xargs kill -9 2>/dev/null || true
 lsof -ti:8096 | xargs kill -9 2>/dev/null || true
 lsof -ti:8097 | xargs kill -9 2>/dev/null || true
 lsof -ti:8098 | xargs kill -9 2>/dev/null || true
+lsof -ti:8099 | xargs kill -9 2>/dev/null || true
 sleep 1
 echo "       Ports 8081, 8082, 8083, 6006, 8095 cleared"
 
@@ -204,8 +205,16 @@ else
     echo "       CVE Watchlist API failed to start - check logs/watchlist_api.log"
 fi
 
-# ── Step 17: Threat Intel API ────────────────────────────────────
-# (started separately if present)
+# ── Step 17: Continuous Monitoring API ──────────────────────────
+echo "[ 17/17 ] Starting Continuous Monitoring API (port 8099)..."
+python3.11 "$NISA_DIR/src/core/monitoring_api.py" > "$NISA_DIR/logs/monitoring_api.log" 2>&1 &
+MON_PID=$!
+sleep 2
+if curl -s http://127.0.0.1:8099/health > /dev/null 2>&1; then
+    echo "       Continuous Monitoring API online - PID $MON_PID"
+else
+    echo "       Continuous Monitoring API failed to start - check logs/monitoring_api.log"
+fi
 
 # ── Step 15: Adversarial API ─────────────────────────────────────
 # (started separately if present)
@@ -240,6 +249,7 @@ echo "║  Session Ctx  http://localhost:8095      ║"
 echo "║  Playbook API http://localhost:8096      ║"
 echo "║  Asset API    http://localhost:8097      ║"
 echo "║  Watchlist    http://localhost:8098      ║"
+echo "║  Monitoring   http://localhost:8099      ║"
 echo "║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"
