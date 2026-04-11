@@ -201,6 +201,27 @@ ASSET_KEYWORDS = [
     "scanned recently", "last scan", "how many assets", "what assets"
 ]
 
+MODEL_MANAGER = "http://127.0.0.1:8100"
+
+def ensure_model_ready(model_key: str):
+    """Tell model manager to ensure this model is loaded before use."""
+    try:
+        r = httpx.post(
+            f"{MODEL_MANAGER}/models/ensure",
+            json={"model_key": model_key},
+            timeout=120.0,
+            headers={"X-NISA-API-Key": NISA_API_KEY}
+        )
+        result = r.json()
+        status = result.get("status", "unknown")
+        if status in ("loaded", "already_loaded"):
+            return True
+        print(f"[ModelManager] Warning: {model_key} status={status}")
+        return True  # Try anyway
+    except Exception as e:
+        print(f"[ModelManager] Could not ensure {model_key}: {e}")
+        return True  # Proceed anyway — don't block on manager failure
+
 def is_asset_query(message: str) -> bool:
     msg = message.lower()
     return any(k in msg for k in ASSET_KEYWORDS)
@@ -265,7 +286,10 @@ def chat(request: ChatRequest):
         # Recall relevant memories
         memories = recall_relevant(request.message, n_results=3)
         memory_context = format_memory_context(memories)
-        
+
+        # Ensure model is loaded via model manager
+        ensure_model_ready(model)
+
         # Determine if MoA should be used
         use_moa = should_use_moa(request.message) and reason not in ["security"]
         
@@ -313,7 +337,7 @@ def chat(request: ChatRequest):
                 ],
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
-                extra_body={"num_ctx": 32768}
+                extra_body={"num_ctx": 40960, "num_predict": 32768}
             )
             response_text = completion.choices[0].message.content
         
@@ -350,6 +374,10 @@ async def chat_stream(request: ChatRequest):
 
         memories = recall_relevant(request.message, n_results=3)
         memory_context = format_memory_context(memories)
+
+        # Ensure model is loaded via model manager
+        ensure_model_ready(model)
+
         system_prompt = NISABA_SYSTEM_PROMPT
         if memory_context:
             system_prompt += memory_context
@@ -390,7 +418,7 @@ async def chat_stream(request: ChatRequest):
                     temperature=request.temperature,
                     max_tokens=request.max_tokens,
                     stream=True,
-                    extra_body={"num_ctx": 32768}
+                    extra_body={"num_ctx": 40960, "num_predict": 32768}
                 )
                 # Send model info first
                 import json

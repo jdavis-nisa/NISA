@@ -1,28 +1,17 @@
 #!/usr/bin/env python3.11
-"""
-NISA Knowledge Web Scraper v3.0
-Deep domain coverage - multiple sub-queries per topic, 200 results each.
-Goal: Nisaba as subject matter expert across all 33+ domains.
-"""
-import os
-import time
-import json
-import hashlib
-import requests
-import tempfile
-import subprocess
+import os, time, json, hashlib, requests, tempfile, subprocess
 from datetime import datetime
-from pathlib import Path
 
 SSD_BASE = "/Volumes/Share Drive/NISA/knowledge"
-SCRAPER_STATE = "/Users/joshuadavis/NISA/knowledge/scraper_state.json"
+STATE_FILE = "/Users/joshuadavis/NISA/knowledge/scraper_state.json"
 DELAY = 2
-AR = 200  # ArXiv results per query
+AR = 200
 MAX_CONTENT = 80000
-PDF_PRIORITY_DOMAINS = {"radar_ew", "radar_ew_deep", "security", "quantum_advanced", "physics_advanced", "combat_medicine"}
+PDF_DOMAINS = {"radar_ew", "radar_ew_deep", "security", "quantum_advanced", "physics_advanced", "combat_medicine"}
 
 def A(name, query, pdf=False):
-    return {"name": name, "url": f"https://export.arxiv.org/api/query?search_query={query.replace(' ','+')}&max_results={AR}&sortBy=submittedDate", "type": "arxiv", "pdf": pdf}
+    url = "https://export.arxiv.org/api/query?search_query=" + query.replace(" ","+") + "&max_results=" + str(AR) + "&sortBy=submittedDate"
+    return {"name": name, "url": url, "type": "arxiv", "pdf": pdf}
 
 def T(name, url):
     return {"name": name, "url": url, "type": "text"}
@@ -944,58 +933,108 @@ SOURCES = {
     ],
 }
 
-# ─── SCRAPING ENGINE ─────────────────────────────────────────────
+
+
 def load_state():
-    if os.path.exists(SCRAPER_STATE):
-        with open(SCRAPER_STATE) as f:
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE) as f:
             return json.load(f)
     return {"scraped": {}}
 
 def save_state(state):
-    with open(SCRAPER_STATE, "w") as f:
+    with open(STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
 
 def url_hash(url):
     return hashlib.md5(url.encode()).hexdigest()[:8]
 
-def save_document(domain, name, content, url):
-    domain_path = os.path.join(SSD_BASE, domain)
-    os.makedirs(domain_path, exist_ok=True)
+def write_file(domain, name, text, url):
+    path = os.path.join(SSD_BASE, domain)
+    os.makedirs(path, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d")
-    fname = f"{name}_{ts}.txt"
-    fpath = os.path.join(domain_path, fname)
-    with open(fpath, "w", encoding="utf-8", errors="ignore") as f:
-        f.write(f"Source: {url}\nScraped: {datetime.now().isoformat()}\n{'='*60}\n\n{content}")
-    print(f"    Saved: {fname} ({len(content)//1024}KB)")
+    fname = name + "_" + ts + ".txt"
+    fpath = os.path.join(path, fname)
+    header = "Source: " + url + chr(10) + "Scraped: " + datetime.now().isoformat() + chr(10) + "="*60 + chr(10)*2
+    with open(fpath, "w", encoding="utf-8", errors="ignore") as fh:
+        fh.write(header + text)
+    kb = os.path.getsize(fpath) // 1024
+    print("    Saved: " + fname + " (" + str(kb) + "KB)")
     return fpath
 
 def scrape_text(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip: {source['name']}")
+        print("    Skip: " + source["name"])
         return
     try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=30)
+        r = requests.get(url, headers={"User-Agent": "NISA/3.0"}, timeout=30)
         r.raise_for_status()
-        save_document(domain, source["name"], r.text[:MAX_CONTENT], url)
+        write_file(domain, source["name"], r.text[:MAX_CONTENT], url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat()}
     except requests.HTTPError as e:
-        code = e.response.status_code
-        if code == 429:
-            print(f"    RATE LIMITED: {source['name']} — wait 5 min then resume")
+        if e.response.status_code == 429:
+            print("    RATE LIMITED: " + source["name"] + " -- wait 5 min")
         else:
-            print(f"    HTTP {code}: {source['name']}")
+            print("    HTTP " + str(e.response.status_code) + ": " + source["name"])
     except Exception as e:
-        print(f"    Error: {source['name']}: {e}")
+        print("    Error: " + source["name"] + ": " + str(e))
 
-def fetch_pdf(domain, name, title, pdf_url, idx, state):
+def scrape_arxiv(source, domain, state):
+    url = source["url"]
+    uid = url_hash(url)
+    if uid in state["scraped"]:
+        print("    Skip: " + source["name"])
+        return
+    try:
+        import xml.etree.ElementTree as ET
+        r = requests.get(url, headers={"User-Agent": "NISA/3.0"}, timeout=45)
+        r.raise_for_status()
+        root = ET.fromstring(r.text)
+        NS = "{http://www.w3.org/2005/Atom}"
+        entries = root.findall(".//" + NS + "entry")
+        lines = ["ArXiv: " + source["name"], "Papers: " + str(len(entries)), ""]
+        pdf_urls = []
+        for entry in entries:
+            t = entry.find(NS + "title")
+            s = entry.find(NS + "summary")
+            authors = entry.findall(NS + "author")
+            pub = entry.find(NS + "published")
+            if t is not None and s is not None:
+                names = [a.find(NS+"name").text for a in authors[:3] if a.find(NS+"name") is not None]
+                pubdate = pub.text[:10] if pub is not None else ""
+                lines.append("Title: " + t.text.strip())
+                lines.append("Authors: " + ", ".join(names))
+                lines.append("Published: " + pubdate)
+                lines.append("Abstract: " + s.text.strip()[:800])
+                lines.append("")
+                if source.get("pdf") and domain in PDF_DOMAINS:
+                    for lnk in entry.findall(NS + "link"):
+                        if lnk.get("type") == "application/pdf":
+                            pdf_urls.append((t.text.strip()[:60], lnk.get("href")))
+        text = chr(10).join(lines)
+        write_file(domain, source["name"], text, url)
+        state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(entries)}
+        print("    " + str(len(entries)) + " abstracts")
+        if pdf_urls and source.get("pdf"):
+            for i, (title, purl) in enumerate(pdf_urls[:3]):
+                time.sleep(DELAY)
+                fetch_pdf(domain, source["name"], title, purl, i, state)
+    except requests.HTTPError as e:
+        if e.response.status_code == 429:
+            print("    RATE LIMITED -- wait 5 min")
+        else:
+            print("    HTTP " + str(e.response.status_code) + ": " + source["name"])
+    except Exception as e:
+        print("    Error: " + source["name"] + ": " + str(e))
+
+def fetch_pdf(domain, sname, title, pdf_url, idx, state):
     uid = url_hash(pdf_url)
     if uid in state["scraped"]:
         return
     tmp = None
     try:
-        r = requests.get(pdf_url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=60, stream=True)
+        r = requests.get(pdf_url, headers={"User-Agent": "NISA/3.0"}, timeout=60, stream=True)
         r.raise_for_status()
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             for chunk in r.iter_content(8192):
@@ -1003,180 +1042,109 @@ def fetch_pdf(domain, name, title, pdf_url, idx, state):
             tmp = f.name
         result = subprocess.run(["pdftotext", tmp, "-"], capture_output=True, text=True, timeout=30)
         if result.returncode == 0 and len(result.stdout) > 500:
-            clean = f"{name}_PDF{idx}_{title[:40].replace(' ','_').replace('/','')}"
-            save_document(domain, clean, result.stdout[:MAX_CONTENT], pdf_url)
-            state["scraped"][uid] = {"name": clean, "ts": datetime.now().isoformat(), "type": "pdf"}
-            print(f"    PDF: {title[:50]}")
+            clean = sname + "_PDF" + str(idx) + "_" + title[:40].replace(" ","_").replace("/","")
+            write_file(domain, clean, result.stdout[:MAX_CONTENT], pdf_url)
+            state["scraped"][uid] = {"name": clean, "ts": datetime.now().isoformat()}
+            print("    PDF: " + title[:50])
         if tmp:
             os.unlink(tmp)
-    except subprocess.TimeoutExpired:
-        print(f"    PDF timeout: {title[:40]}")
+    except Exception as e:
+        print("    PDF err: " + title[:40] + ": " + str(e))
         if tmp:
             try: os.unlink(tmp)
             except: pass
-    except Exception as e:
-        print(f"    PDF err: {title[:40]}: {e}")
-        if tmp:
-            try: os.unlink(tmp)
-            except: pass
-
-def scrape_arxiv(source, domain, state):
-    url = source["url"]
-    uid = url_hash(url)
-    if uid in state["scraped"]:
-        print(f"    Skip: {source['name']}")
-        return
-    try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=45)
-        r.raise_for_status()
-        import xml.etree.ElementTree as ET
-        root = ET.fromstring(r.text)
-        ns = {"atom": "http://www.w3.org/2005/Atom"}
-        entries = root.findall("atom:entry", ns)
-        content = f"ArXiv: {source['name']}\nQuery: {url}\nPapers: {len(entries)}\n\n"
-        pdf_urls = []
-        for entry in entries:
-            title = entry.find("atom:title", ns)
-            summary = entry.find("atom:summary", ns)
-            authors = entry.findall("atom:author", ns)
-            published = entry.find("atom:published", ns)
-            links = entry.findall("atom:link", ns)
-            if title and summary:
-                names = [a.find("atom:name", ns).text for a in authors[:3] if a.find("atom:name", ns) is not None]
-                pub = published.text[:10] if published is not None else ""
-                content += f"Title: {title.text.strip()}\n"
-                content += f"Authors: {', '.join(names)}\nPublished: {pub}\n"
-                content += f"Abstract: {summary.text.strip()[:800]}\n\n"
-                if source.get("pdf") and domain in PDF_PRIORITY_DOMAINS:
-                    for lnk in links:
-                        if lnk.get("type") == "application/pdf":
-                            pdf_urls.append((title.text.strip()[:60], lnk.get("href")))
-        save_document(domain, source["name"], content, url)
-        state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(entries)}
-        print(f"    {len(entries)} abstracts")
-        if pdf_urls and source.get("pdf"):
-            for i, (title, purl) in enumerate(pdf_urls[:3]):
-                time.sleep(DELAY)
-                fetch_pdf(domain, source["name"], title, purl, i, state)
-    except requests.HTTPError as e:
-        if e.response.status_code == 429:
-            print(f"    RATE LIMITED — wait 5 min")
-        else:
-            print(f"    HTTP {e.response.status_code}: {source['name']}")
-    except Exception as e:
-        print(f"    Error: {source['name']}: {e}")
 
 def scrape_nvd(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip: {source['name']}")
+        print("    Skip: " + source["name"])
         return
     try:
-        headers = {"User-Agent": "NISA-Knowledge-Bot/3.0"}
+        headers = {"User-Agent": "NISA/3.0"}
         key = os.environ.get("NVD_API_KEY", "")
         if key:
             headers["apiKey"] = key
         r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
         vulns = r.json().get("vulnerabilities", [])
-        content = f"NIST NVD CVE Database\nSource: {url}\n\n"
+        lines = ["NIST NVD CVEs", "Source: " + url, ""]
         for v in vulns:
             cve = v.get("cve", {})
             cid = cve.get("id", "")
             desc = next((d["value"] for d in cve.get("descriptions", []) if d["lang"] == "en"), "")
             m = cve.get("metrics", {})
-            cvss = m.get("cvssMetricV31", [{}])[0].get("cvssData", {}) or m.get("cvssMetricV30", [{}])[0].get("cvssData", {})
-            refs = [x.get("url", "") for x in cve.get("references", [])[:2]]
-            content += f"CVE: {cid}\nSeverity: {cvss.get('baseSeverity','N/A')} | Score: {cvss.get('baseScore','N/A')}\n"
-            content += f"Vector: {cvss.get('vectorString','N/A')}\nDescription: {desc[:400]}\n"
-            if refs:
-                content += f"Refs: {' | '.join(refs)}\n"
-            content += "\n"
-        save_document(domain, source["name"], content, url)
+            cvss = m.get("cvssMetricV31", [{}])[0].get("cvssData", {})
+            lines.append("CVE: " + cid)
+            lines.append("Severity: " + str(cvss.get("baseSeverity","N/A")) + " | Score: " + str(cvss.get("baseScore","N/A")))
+            lines.append("Description: " + desc[:400])
+            lines.append("")
+        write_file(domain, source["name"], chr(10).join(lines), url)
         state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(vulns)}
-        print(f"    {len(vulns)} CVEs")
+        print("    " + str(len(vulns)) + " CVEs")
     except requests.HTTPError as e:
         if e.response.status_code == 429:
-            print(f"    NVD RATE LIMITED — wait 30 sec (or get free API key at nvd.nist.gov)")
+            print("    NVD RATE LIMITED -- wait 30 sec")
         else:
-            print(f"    HTTP {e.response.status_code}: {source['name']}")
+            print("    HTTP " + str(e.response.status_code) + ": " + source["name"])
     except Exception as e:
-        print(f"    Error: {source['name']}: {e}")
+        print("    Error: " + source["name"] + ": " + str(e))
 
 def scrape_mitre(source, domain, state):
     url = source["url"]
     uid = url_hash(url)
     if uid in state["scraped"]:
-        print(f"    Skip: {source['name']}")
+        print("    Skip: " + source["name"])
         return
     try:
-        r = requests.get(url, headers={"User-Agent": "NISA-Knowledge-Bot/3.0"}, timeout=90)
+        r = requests.get(url, headers={"User-Agent": "NISA/3.0"}, timeout=90)
         r.raise_for_status()
         data = r.json()
         techniques = [o for o in data.get("objects", []) if o.get("type") == "attack-pattern"]
-        content = f"MITRE ATT&CK - {source['name']}\nTotal: {len(techniques)}\n\n"
+        lines = ["MITRE ATT&CK: " + source["name"], "Total: " + str(len(techniques)), ""]
         for t in techniques[:200]:
-            phases = [k.get("phase_name", "") for k in t.get("kill_chain_phases", [])]
-            tid = next((e.get("external_id", "") for e in t.get("external_references", []) if e.get("source_name") == "mitre-attack"), "")
-            content += f"ID: {tid} | Name: {t.get('name', '')}\n"
-            content += f"Tactics: {', '.join(phases)}\n"
-            content += f"Description: {t.get('description', '')[:600]}\n\n"
-        save_document(domain, source["name"], content, url)
-        state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat(), "count": len(techniques)}
-        print(f"    {len(techniques)} techniques")
+            phases = [k.get("phase_name","") for k in t.get("kill_chain_phases",[])]
+            tid = next((e.get("external_id","") for e in t.get("external_references",[]) if e.get("source_name")=="mitre-attack"), "")
+            lines.append("ID: " + tid + " | " + t.get("name",""))
+            lines.append("Tactics: " + ", ".join(phases))
+            lines.append("Description: " + t.get("description","")[:600])
+            lines.append("")
+        write_file(domain, source["name"], chr(10).join(lines), url)
+        state["scraped"][uid] = {"name": source["name"], "ts": datetime.now().isoformat()}
+        print("    " + str(len(techniques)) + " techniques")
     except Exception as e:
-        print(f"    Error: {source['name']}: {e}")
+        print("    Error: " + source["name"] + ": " + str(e))
 
-def run_scraper(domains=None, force=False):
-    print("=" * 60)
-    print("  NISA Knowledge Scraper v3.0")
-    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  ArXiv per query: {AR} | PDF domains: {PDF_PRIORITY_DOMAINS}")
-    print("=" * 60)
-
+def run(domains=None, force=False):
+    print("="*60)
+    print("  NISA Knowledge Scraper v3.1")
+    print("  " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("="*60)
     state = load_state()
     if force:
         state["scraped"] = {}
-        print("Force mode: clearing state\n")
-
-    dispatch = {
-        "text": scrape_text,
-        "arxiv": scrape_arxiv,
-        "nvd": scrape_nvd,
-        "mitre": scrape_mitre,
-        "dtic": scrape_text,
-        "nasa": scrape_text,
-        "pubmed_search": scrape_text,
-        "pdf": scrape_text,
-    }
-
+    dispatch = {"text": scrape_text, "arxiv": scrape_arxiv, "nvd": scrape_nvd, "mitre": scrape_mitre}
     target = domains or list(SOURCES.keys())
     total = sum(len(SOURCES[d]) for d in target if d in SOURCES)
     done = 0
-
     for domain in target:
         if domain not in SOURCES:
-            print(f"Unknown domain: {domain}")
+            print("Unknown: " + domain)
             continue
-        sources = SOURCES[domain]
-        print(f"\n[{domain.upper()}] ({len(sources)} sources)")
-        for source in sources:
+        print(chr(10) + "[" + domain.upper() + "] (" + str(len(SOURCES[domain])) + " sources)")
+        for source in SOURCES[domain]:
             done += 1
-            print(f"  [{done}/{total}] {source['name']}")
+            print("  [" + str(done) + "/" + str(total) + "] " + source["name"])
             fn = dispatch.get(source["type"], scrape_text)
             fn(source, domain, state)
             time.sleep(DELAY)
         save_state(state)
-        print(f"  Saved. Total: {len(state['scraped'])}")
-
+        print("  Saved. Total: " + str(len(state["scraped"])))
     save_state(state)
-    print(f"\n{'='*60}")
-    print(f"  COMPLETE. {len(state['scraped'])} sources total.")
-    print("=" * 60)
+    print(chr(10) + "COMPLETE. " + str(len(state["scraped"])) + " sources.")
 
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
     domains = [a for a in sys.argv[1:] if not a.startswith("--")] or None
-    run_scraper(domains=domains, force=force)
+    run(domains=domains, force=force)

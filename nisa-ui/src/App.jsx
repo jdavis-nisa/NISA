@@ -20,6 +20,7 @@ import AssetInventory from './components/AssetInventory'
 import CVEWatchlist from './components/CVEWatchlist'
 import AttackSurface from './components/AttackSurface'
 import NisabaOrb from './components/NisabaOrb'
+import UnifiedReport from './components/UnifiedReport'
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
               <Route path="/assets" element={<AssetInventory />} />
               <Route path="/watchlist" element={<CVEWatchlist />} />
               <Route path="/attacksurface" element={<AttackSurface />} />
+              <Route path="/report" element={<UnifiedReport />} />
             </Routes>
           </main>
         </div>
@@ -193,6 +195,7 @@ function Sidebar() {
     { to: "/assets", icon: Server, label: "ASSETS", sublabel: "Asset Inventory" },
     { to: "/watchlist", icon: Bell, label: "WATCHLIST", sublabel: "CVE Monitoring" },
     { to: "/attacksurface", icon: Map, label: "ATTACK SURFACE", sublabel: "Exposure Map" },
+  { to: "/report", icon: FileText, label: "REPORT", sublabel: "Unified Generator" },
   ]
   return (
     <nav style={{

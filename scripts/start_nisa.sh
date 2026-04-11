@@ -220,7 +220,18 @@ fi
 # (started separately if present)
 
 # ── Step 16: Phoenix ─────────────────────────────────────────────
-echo "[ 16/16 ] Starting Arize Phoenix (port 6006)..."
+echo "[ 16/17 ] Starting Report API (port 8101)...
+lsof -ti:8101 | xargs kill -9 2>/dev/null
+python3.11 $DIR/src/core/report_api.py > $DIR/logs/report_api.log 2>&1 &
+RPTPID=$!
+sleep 2
+if lsof -i:8101 >/dev/null 2>&1; then
+  echo "       Report API online - PID $RPTPID"
+else
+  echo "       Report API failed - check logs/report_api.log"
+fi
+
+[ 17/17 ] Starting Arize Phoenix (port 6006)..."
 python3.11 -m phoenix.server.main serve > "$NISA_DIR/logs/phoenix.log" 2>&1 &
 PHX_PID=$!
 sleep 5
@@ -250,7 +261,8 @@ echo "║  Playbook API http://localhost:8096      ║"
 echo "║  Asset API    http://localhost:8097      ║"
 echo "║  Watchlist    http://localhost:8098      ║"
 echo "║  Monitoring   http://localhost:8099      ║"
-echo "║  Phoenix      http://localhost:6006      ║"
+echo "║  Report API   http://localhost:8101      ║
+║  Phoenix      http://localhost:6006      ║"
 echo "║  UI           http://localhost:5173      ║"
 echo "╠══════════════════════════════════════════╣"
 echo "║  Start UI:                               ║"
