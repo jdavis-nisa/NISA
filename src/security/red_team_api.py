@@ -379,13 +379,31 @@ def run_garak(session_id: str, req: RedTeamRequest) -> dict:
         ], capture_output=True, text=True, timeout=600, cwd=NISA_DIR)
 
         output = result.stdout + result.stderr
-        add_turn(session_id, 1, "garak", "COMPLETE", True)
-
+        # Parse probe results from garak output
+        probes = []
+        passed = 0
+        total = 0
+        for line in output.split("
+"):
+            if "PASS" in line or "ok" in line.lower():
+                probe = line.strip()[:80]
+                add_turn(session_id, total+1, probe or "probe", "DEFENDED", True)
+                probes.append({"probe": probe, "result": "PASS"})
+                passed += 1; total += 1
+            elif "FAIL" in line or "zap" in line.lower():
+                probe = line.strip()[:80]
+                add_turn(session_id, total+1, probe or "probe", "BREACHED", False)
+                probes.append({"probe": probe, "result": "FAIL"})
+                total += 1
+        if total == 0:
+            add_turn(session_id, 1, "Garak Suite", "COMPLETE", True)
+            passed, total = 1, 1
         return {
-            "passed": 1,
-            "total": 1,
+            "passed": passed,
+            "total": total,
             "attack_type": "Garak",
-            "output": output[:2000],
+            "probes": probes,
+            "output": output,
             "report": "Check ~/.local/share/garak/garak_runs/ for full report"
         }
     except Exception as e:

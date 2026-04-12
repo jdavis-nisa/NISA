@@ -233,16 +233,7 @@ function LaunchPanel({ onLaunch }) {
 function LivePanel({ sessionId, liveData }) {
   if (!liveData) return (
     <Panel title="LIVE RESULTS FEED">
-      <div style={{
-        height: "200px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "11px",
-        color: "var(--text-dim)",
-        letterSpacing: "0.1em",
-      }}>
+      <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "JetBrains Mono, monospace", fontSize: "11px", color: "var(--text-dim)", letterSpacing: "0.1em" }}>
         AWAITING ATTACK LAUNCH
       </div>
     </Panel>
@@ -252,113 +243,61 @@ function LivePanel({ sessionId, liveData }) {
   const passed = liveData.score_passed || 0
   const pct = total > 0 ? Math.round(passed / total * 100) : 0
   const turns = liveData.turns || []
-
-  const resultColor = {
-    DEFENDED: "var(--success)",
-    BREACHED: "var(--danger)",
-    NEUTRAL: "var(--warning)",
-    ERROR: "var(--text-dim)",
-    COMPLETE: "var(--accent-cyan)",
-  }
+  const categories = liveData.results?.categories || null
+  const resultColor = { DEFENDED: "var(--success)", BREACHED: "var(--danger)", FAILED: "var(--danger)", NEUTRAL: "var(--warning)", ERROR: "var(--text-dim)", COMPLETE: "var(--accent-cyan)" }
+  const resultIcon  = { DEFENDED: "✓", BREACHED: "✗", FAILED: "✗", NEUTRAL: "~", ERROR: "?", COMPLETE: "✓" }
 
   return (
     <Panel title="LIVE RESULTS FEED">
-      {/* Score bar */}
       <div style={{ marginBottom: "12px" }}>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "4px",
-        }}>
-          <span style={{
-            fontFamily: "JetBrains Mono, monospace",
-            fontSize: "10px",
-            color: "var(--text-dim)",
-          }}>DEFENSE SCORE</span>
-          <span style={{
-            fontFamily: "Rajdhani, sans-serif",
-            fontWeight: 700,
-            fontSize: "16px",
-            color: pct >= 80 ? "var(--success)" : pct >= 50 ? "var(--warning)" : "var(--danger)",
-          }}>{passed}/{total} ({pct}%)</span>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)" }}>DEFENSE SCORE</span>
+          <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "16px", color: pct >= 80 ? "var(--success)" : pct >= 50 ? "var(--warning)" : "var(--danger)" }}>{passed}/{total} ({pct}%)</span>
         </div>
-        <div style={{
-          height: "4px",
-          background: "var(--bg-elevated)",
-          borderRadius: "2px",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: pct >= 80 ? "var(--success)" : pct >= 50 ? "var(--warning)" : "var(--danger)",
-            transition: "width 0.5s ease",
-          }} />
+        <div style={{ height: "4px", background: "var(--bg-elevated)", borderRadius: "2px", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "var(--success)" : pct >= 50 ? "var(--warning)" : "var(--danger)", transition: "width 0.5s ease" }} />
         </div>
       </div>
-
-      {/* Status */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        marginBottom: "10px",
-      }}>
-        <div style={{
-          width: "6px", height: "6px",
-          borderRadius: "50%",
-          background: liveData.status === "running" ? "var(--warning)" :
-                      liveData.status === "complete" ? "var(--success)" : "var(--danger)",
-          animation: liveData.status === "running" ? "pulse 1s infinite" : "none",
-        }} />
-        <span style={{
-          fontFamily: "JetBrains Mono, monospace",
-          fontSize: "10px",
-          color: "var(--text-dim)",
-          letterSpacing: "0.1em",
-        }}>{liveData.status?.toUpperCase()}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: liveData.status === "running" ? "var(--warning)" : liveData.status === "complete" ? "var(--success)" : "var(--danger)", animation: liveData.status === "running" ? "pulse 1s infinite" : "none" }} />
+        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)", letterSpacing: "0.1em" }}>{liveData.status?.toUpperCase()}</span>
         <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
       </div>
-
-      {/* Turn feed */}
-      <div style={{ maxHeight: "220px", overflowY: "auto" }}>
-        {turns.length === 0 ? (
-          <div style={{
-            fontFamily: "JetBrains Mono, monospace",
-            fontSize: "10px",
-            color: "var(--text-dim)",
-            padding: "8px 0",
-          }}>Waiting for first turn...</div>
-        ) : (
-          turns.map((t, i) => (
-            <div key={i} style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "4px 0",
-              borderBottom: "1px solid var(--border)",
-              fontFamily: "JetBrains Mono, monospace",
-              fontSize: "10px",
-            }}>
-              <span style={{ color: "var(--text-dim)", minWidth: "16px" }}>
-                [{t.turn}]
-              </span>
-              <span style={{ color: "var(--text-secondary)", flex: 1 }}>
-                {t.attack}
-              </span>
-              <span style={{
-                color: resultColor[t.result] || "var(--text-dim)",
-                fontWeight: 600,
-              }}>
-                {t.result === "DEFENDED" ? "✓" : t.result === "BREACHED" ? "✗" : "~"} {t.result}
-              </span>
-            </div>
-          ))
+      {categories && (
+        <div style={{ marginBottom: "10px", maxHeight: "160px", overflowY: "auto" }}>
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--accent-gold)", letterSpacing: "0.1em", marginBottom: "6px" }}>OWASP CATEGORY BREAKDOWN</div>
+          {Object.entries(categories).map(([cat, info]) => {
+            const catPct = info.score || 0
+            const short = cat.replace(/_/g, " ").replace("LLM0", "LLM")
+            return (
+              <div key={cat} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "3px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", width: "150px", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{short}</span>
+                <div style={{ flex: 1, height: "3px", background: "var(--bg-elevated)", borderRadius: "2px" }}>
+                  <div style={{ height: "100%", width: `${catPct}%`, background: catPct >= 80 ? "var(--success)" : catPct >= 50 ? "var(--warning)" : "var(--danger)" }} />
+                </div>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: catPct >= 80 ? "var(--success)" : catPct >= 50 ? "var(--warning)" : "var(--danger)", width: "32px", textAlign: "right" }}>{catPct}%</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      <div style={{ maxHeight: categories ? "120px" : "220px", overflowY: "auto" }}>
+        {turns.length === 0 && liveData.status === "running" && (
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)", padding: "8px 0", letterSpacing: "0.1em" }}>RUNNING PROBES...</div>
         )}
+        {[...turns].reverse().map((t, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "3px 0", borderBottom: "1px solid var(--border)" }}>
+            <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", fontWeight: 700, color: resultColor[t.result] || "var(--text-dim)", width: "12px", flexShrink: 0 }}>{resultIcon[t.result] || "?"}</span>
+            <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)", width: "22px", flexShrink: 0 }}>#{t.turn}</span>
+            <span style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{t.attack_type}</span>
+            <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", fontWeight: 700, color: resultColor[t.result] || "var(--text-dim)", flexShrink: 0 }}>{t.result}</span>
+          </div>
+        ))}
       </div>
     </Panel>
   )
 }
+
 
 function HistoryPanel({ sessions, onRefresh, onSelect }) {
   return (
@@ -395,12 +334,19 @@ function HistoryPanel({ sessions, onRefresh, onSelect }) {
                   <td style={tdStyle}>{s.timestamp?.slice(0, 16)}</td>
                   <td style={tdStyle}>{s.attack_type?.toUpperCase()}</td>
                   <td style={tdStyle}>{s.score_passed}/{s.score_total}</td>
-                  <td style={{
-                    ...tdStyle,
-                    color: s.score_pct >= 80 ? "var(--success)" :
-                           s.score_pct >= 50 ? "var(--warning)" : "var(--danger)",
-                    fontWeight: 600,
-                  }}>{s.score_pct ? `${Math.round(s.score_pct)}%` : "--"}</td>
+                  <td style={tdStyle}>
+                    {s.score_pct ? (
+                      <span style={{
+                        display: "inline-block", padding: "2px 7px", borderRadius: "2px",
+                        fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "10px", letterSpacing: "0.1em",
+                        background: s.score_pct >= 80 ? "rgba(68,200,68,0.12)" : s.score_pct >= 50 ? "rgba(255,180,0,0.12)" : "rgba(232,64,64,0.12)",
+                        color: s.score_pct >= 80 ? "var(--success)" : s.score_pct >= 50 ? "var(--warning)" : "var(--danger)",
+                        border: `1px solid ${s.score_pct >= 80 ? "rgba(68,200,68,0.3)" : s.score_pct >= 50 ? "rgba(255,180,0,0.3)" : "rgba(232,64,64,0.3)"}`,
+                      }}>
+                        {s.score_pct >= 80 ? "PASS" : s.score_pct >= 50 ? "WARN" : "FAIL"} {Math.round(s.score_pct)}%
+                      </span>
+                    ) : "--"}
+                  </td>
                   <td style={tdStyle}>
                     {s.duration_seconds ? `${Math.round(s.duration_seconds)}s` : "--"}
                   </td>
