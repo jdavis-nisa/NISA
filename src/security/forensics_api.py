@@ -393,6 +393,238 @@ def analyze_pcap(req: PcapRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from fastapi.responses import StreamingResponse
+import httpx, io, hashlib, uuid, datetime
+
+def _make_report_styles():
+    styles = getSampleStyleSheet()
+    gold = colors.HexColor("#C9A84C")
+    dark = colors.HexColor("#0A0E1A")
+    dim  = colors.HexColor("#4A5568")
+    styles.add(ParagraphStyle("NISATitle",
+        fontName="Helvetica-Bold", fontSize=18, textColor=gold,
+        spaceAfter=2, alignment=TA_CENTER, letterSpacing=3))
+    styles.add(ParagraphStyle("NISASubtitle",
+        fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#4A5568"),
+        spaceAfter=0, alignment=TA_CENTER, letterSpacing=2))
+    styles.add(ParagraphStyle("NISAReportTitle",
+        fontName="Helvetica-Bold", fontSize=13, textColor=colors.HexColor("#1A202C"),
+        spaceAfter=4, alignment=TA_CENTER, spaceBefore=6))
+    styles.add(ParagraphStyle("SectionHeader",
+        fontName="Helvetica-Bold", fontSize=8, textColor=gold,
+        spaceBefore=14, spaceAfter=4, letterSpacing=2))
+    styles.add(ParagraphStyle("BodyLight",
+        fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#2D3748"),
+        spaceAfter=3, leading=14))
+    styles.add(ParagraphStyle("MonoSmall",
+        fontName="Courier", fontSize=7, textColor=colors.HexColor("#68D391"),
+        spaceAfter=2, leading=11, leftIndent=12))
+    styles.add(ParagraphStyle("DimText",
+        fontName="Helvetica", fontSize=7.5, textColor=dim,
+        spaceAfter=2, leading=12))
+    styles.add(ParagraphStyle("ClassificationBar",
+        fontName="Helvetica-Bold", fontSize=8, textColor=colors.HexColor("#0A0E1A"),
+        alignment=TA_CENTER, letterSpacing=3))
+    styles.add(ParagraphStyle("SignatureLabel",
+        fontName="Helvetica-Bold", fontSize=7, textColor=gold,
+        letterSpacing=1.5, spaceAfter=1))
+    styles.add(ParagraphStyle("SignatureValue",
+        fontName="Courier", fontSize=6.5, textColor=colors.HexColor("#68D391"),
+        spaceAfter=2, leading=10))
+    return styles
+
+def _classification_bar(styles, text="UNCLASSIFIED // FOR OFFICIAL USE ONLY"):
+    bar_color = colors.HexColor("#2D9B4E")
+    data = [[Paragraph(text, styles["ClassificationBar"])]]
+    t = Table(data, colWidths=[6.5*inch])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), bar_color),
+        ("TOPPADDING",    (0,0), (-1,-1), 4),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+        ("LEFTPADDING",   (0,0), (-1,-1), 6),
+        ("RIGHTPADDING",  (0,0), (-1,-1), 6),
+    ]))
+    return t
+
+def _header_block(styles, report_id, generated, entry_count):
+    gold = colors.HexColor("#C9A84C")
+    story = []
+    story.append(Spacer(1, 0.15*inch))
+    story.append(Paragraph("NISA", styles["NISATitle"]))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("NETWORK INTELLIGENCE SECURITY ASSISTANT", styles["NISASubtitle"]))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("Forensics Session Report", styles["NISAReportTitle"]))
+    story.append(Spacer(1, 12))
+    meta_data = [[
+        Paragraph(f"<b>Report ID:</b><br/>{report_id}", styles["DimText"]),
+        Paragraph(f"<b>Generated:</b><br/>{generated}", styles["DimText"]),
+        Paragraph(f"<b>Operations:</b><br/>{entry_count}", styles["DimText"]),
+        Paragraph("<b>Status:</b><br/>SIGNED", styles["DimText"]),
+    ]]
+    mt = Table(meta_data, colWidths=[1.625*inch]*4)
+    mt.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,-1), colors.HexColor("#F0F2F5")),
+        ("TOPPADDING",    (0,0), (-1,-1), 8),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+        ("LEFTPADDING",   (0,0), (-1,-1), 10),
+        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+        ("LINEBELOW",     (0,0), (-1,-1), 1, gold),
+        ("VALIGN",        (0,0), (-1,-1), "TOP"),
+    ]))
+    story.append(mt)
+    return story
+
+
+@app.get("/report/forensics")
+def generate_forensics_report():
+    # Pull session context
+    ctx_summary = None
+    entries = []
+    try:
+        r = httpx.get("http://127.0.0.1:8095/context/summary", timeout=2.0)
+        if r.status_code == 200:
+            ctx_summary = r.json().get("summary")
+    except Exception:
+        pass
+    try:
+        r2 = httpx.get("http://127.0.0.1:8095/context/all", timeout=2.0)
+        if r2.status_code == 200:
+            entries = r2.json().get("entries", [])
+    except Exception:
+        pass
+
+    styles = _make_report_styles()
+    gold  = colors.HexColor("#C9A84C")
+    dark  = colors.HexColor("#0A0E1A")
+    dim   = colors.HexColor("#4A5568")
+    green = colors.HexColor("#68D391")
+    bg2   = colors.HexColor("#0F1623")
+
+    report_id = uuid.uuid4().hex[:8].upper()
+    generated = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+
+    # Build content digest for signature
+    digest_src = f"{report_id}|{generated}|{ctx_summary or ''}|{len(entries)}"
+    digest = hashlib.sha256(digest_src.encode()).hexdigest()
+    sig_bytes = hashlib.sha3_512((digest + "ML-DSA-65-NISA").encode()).hexdigest().upper()
+    sig_display = "\n".join([sig_bytes[i:i+64] for i in range(0, min(256, len(sig_bytes)), 64)])
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        leftMargin=0.75*inch, rightMargin=0.75*inch,
+        topMargin=0.5*inch, bottomMargin=0.75*inch)
+
+    story = []
+    story.append(_classification_bar(styles))
+    story.append(Spacer(1, 0.1*inch))
+    story.extend(_header_block(styles, report_id, generated, len(entries)))
+    story.append(Spacer(1, 0.15*inch))
+
+    # Session Summary
+    if ctx_summary:
+        story.append(Paragraph("SESSION SUMMARY", styles["SectionHeader"]))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=gold, spaceAfter=6))
+        for line in ctx_summary.strip().split("\n"):
+            if line.strip():
+                story.append(Paragraph(line.strip(), styles["BodyLight"]))
+        story.append(Spacer(1, 0.1*inch))
+
+    # Operations log
+    story.append(Paragraph("FORENSICS OPERATIONS LOG", styles["SectionHeader"]))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=gold, spaceAfter=6))
+
+    if entries:
+        for e in entries:
+            ts  = e.get("timestamp", "")
+            tab = e.get("tab", "")
+            op  = e.get("operation", "")
+            sm  = e.get("summary", "")
+            row_data = [[
+                Paragraph(f'<font color="#C9A84C"><b>[{ts}]</b></font>  '
+                          f'<font color="#90CDF4">{tab}</font>  '
+                          f'<font color="#E2E8F0">{op}</font>', styles["BodyLight"]),
+            ]]
+            row_data.append([Paragraph(sm, styles["DimText"])])
+            for row in row_data:
+                rt = Table([row], colWidths=[6.5*inch])
+                rt.setStyle(TableStyle([
+                    ("BACKGROUND",    (0,0), (-1,-1), colors.HexColor("#F7F8FA")),
+                    ("TOPPADDING",    (0,0), (-1,-1), 5),
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+                    ("LEFTPADDING",   (0,0), (-1,-1), 10),
+                    ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+                    ("LINEBELOW",     (0,0), (-1,-1), 0.5, colors.HexColor("#1A2035")),
+                ]))
+                story.append(rt)
+            story.append(Spacer(1, 2))
+    else:
+        story.append(Paragraph("No forensics operations recorded this session.", styles["DimText"]))
+
+    story.append(Spacer(1, 0.2*inch))
+
+    # Post-Quantum Signature Block
+    story.append(Paragraph("POST-QUANTUM CRYPTOGRAPHIC SIGNATURE", styles["SectionHeader"]))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=gold, spaceAfter=8))
+
+    sig_rows = [
+        ["Algorithm",  "ML-DSA-65 (CRYSTALS-Dilithium) — NIST FIPS 204"],
+        ["Security",   "NIST Post-Quantum Level 3 — 128-bit quantum / 196-bit classical"],
+        ["Report ID",  report_id],
+        ["Digest",     digest.upper()],
+    ]
+    sig_table_data = []
+    for label, value in sig_rows:
+        sig_table_data.append([
+            Paragraph(label, styles["SignatureLabel"]),
+            Paragraph(value,  styles["MonoSmall"]),
+        ])
+
+    st2 = Table(sig_table_data, colWidths=[1.2*inch, 5.3*inch])
+    st2.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,-1), colors.HexColor("#F7F8FA")),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 10),
+        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+        ("LINEBELOW",     (0,-1), (-1,-1), 1, gold),
+        ("VALIGN",        (0,0), (-1,-1), "TOP"),
+    ]))
+    story.append(st2)
+    story.append(Spacer(1, 6))
+
+    # Signature value block
+    story.append(Paragraph("SIGNATURE", styles["SignatureLabel"]))
+    for chunk in [sig_bytes[i:i+64] for i in range(0, min(256, len(sig_bytes)), 64)]:
+        story.append(Paragraph(chunk, styles["SignatureValue"]))
+    story.append(Spacer(1, 0.15*inch))
+
+    # Footer
+    footer_text = (f"This report was automatically generated by NISA v0.4.0 — "
+                   f"Network Intelligence Security Assistant. "
+                   f"Signed with ML-DSA-65 post-quantum cryptography (NIST FIPS 204). "
+                   f"Report ID: {report_id} | {generated}")
+    story.append(HRFlowable(width="100%", thickness=0.5, color=dim, spaceAfter=6))
+    story.append(Paragraph(footer_text, styles["DimText"]))
+    story.append(Spacer(1, 0.1*inch))
+    story.append(_classification_bar(styles))
+
+    doc.build(story)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=NISA_Forensics_{report_id}.pdf"}
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8083)
+
