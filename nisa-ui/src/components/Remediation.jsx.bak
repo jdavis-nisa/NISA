@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { pushContext } from "../SessionContext"
 import { useLocation } from "react-router-dom"
-import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download, XCircle, SkipForward } from "lucide-react"
+import { Shield, CheckCircle, AlertTriangle, Lock, Play, ChevronRight, Download } from "lucide-react"
 import api, { NISA_API_KEY } from "../api"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
@@ -55,43 +55,6 @@ const btnStyle = (color = "var(--accent-gold)") => ({
   gap: "6px",
 })
 
-const sevColor = { CRITICAL: "var(--danger)", HIGH: "#ff6b35", MEDIUM: "var(--warning)", LOW: "var(--accent-cyan)" }
-const sevRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
-
-// ── pulse-blue keyframe injected once ──────────────────────────────────────
-if (typeof document !== "undefined" && !document.getElementById("nisa-rem-styles")) {
-  const style = document.createElement("style")
-  style.id = "nisa-rem-styles"
-  style.textContent = `
-    @keyframes nisaTabPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(0,180,255,0.7); }
-      70%  { box-shadow: 0 0 0 8px rgba(0,180,255,0); }
-      100% { box-shadow: 0 0 0 0 rgba(0,180,255,0); }
-    }
-    .nisa-tab-pulse {
-      animation: nisaTabPulse 1.4s ease-out infinite;
-      border-color: var(--accent-cyan) !important;
-      color: var(--accent-cyan) !important;
-    }
-    @keyframes nisaFadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .nisa-queue-item { animation: nisaFadeIn 0.2s ease both; }
-    @keyframes nisaSkipOut {
-      to { opacity: 0; transform: translateX(24px); }
-    }
-    .nisa-skip-out { animation: nisaSkipOut 0.25s ease forwards; }
-  `
-  document.head.appendChild(style)
-}
-
-// ── exported pulse trigger so Security tab can call it ─────────────────────
-export function triggerRemediationPulse(findings) {
-  window.__nisaRemediationQueue = findings   // [{vulnerability, component, language, severity}]
-  window.dispatchEvent(new CustomEvent("nisa:remediation-ready"))
-}
-
 export default function Remediation() {
   const [step, setStep] = useState("authorize")
   const location = useLocation()
@@ -103,66 +66,22 @@ export default function Remediation() {
   const [applyResult, setApplyResult] = useState(null)
   const [applying, setApplying] = useState(false)
 
-  // ── finding queue ──────────────────────────────────────────────────────────
-  const [queue, setQueue] = useState([])           // [{id, vulnerability, component, language, severity, skipped}]
-  const [activeIdx, setActiveIdx] = useState(0)
-  const [skipConfirm, setSkipConfirm] = useState(null)  // index awaiting confirmation
-  const [pulsing, setPulsing] = useState(false)
-  const tabRef = useRef(null)
-
-  // listen for findings pushed from Security tab
-  useEffect(() => {
-    const handler = () => {
-      const raw = window.__nisaRemediationQueue || []
-      if (!raw.length) return
-      const sorted = [...raw].sort((a, b) => (sevRank[a.severity] ?? 9) - (sevRank[b.severity] ?? 9))
-      const withIds = sorted.map((f, i) => ({ ...f, id: `${Date.now()}-${i}`, skipped: false }))
-      setQueue(withIds)
-      setActiveIdx(0)
-      setPulsing(true)
-      // pre-fill top finding
-      const top = withIds[0]
-      setVulnForm({
-        vulnerability: top.vulnerability || "",
-        affected_component: top.component || "",
-        language: top.language || "python",
+  const applyPatch = async () => {
+    if (!applyFile.trim()) return
+    setApplying(true)
+    try {
+      const res = await api.post(`${REM_API}/apply`, {
+        session_id: session.session_id,
+        remediation_id: result.remediation_id,
+        target_file: applyFile,
+        backup: true
       })
+      setApplyResult(res.data)
+    } catch (e) {
+      setApplyResult({ error: e.response?.data?.detail || e.message })
     }
-    window.addEventListener("nisa:remediation-ready", handler)
-    return () => window.removeEventListener("nisa:remediation-ready", handler)
-  }, [])
-
-  // stop pulsing once user interacts with this tab
-  const stopPulse = () => setPulsing(false)
-
-  const loadFinding = (idx) => {
-    const f = queue[idx]
-    if (!f) return
-    setActiveIdx(idx)
-    setVulnForm({
-      vulnerability: f.vulnerability || "",
-      affected_component: f.component || "",
-      language: f.language || "python",
-    })
-    setResult(null)
-    setError(null)
-    if (step === "results") setStep("remediate")
-    stopPulse()
+    setApplying(false)
   }
-
-  const requestSkip = (idx) => setSkipConfirm(idx)
-  const confirmSkip = () => {
-    const idx = skipConfirm
-    setSkipConfirm(null)
-    setQueue(prev => prev.map((f, i) => i === idx ? { ...f, skipped: true } : f))
-    // advance to next unskipped
-    const next = queue.findIndex((f, i) => i > idx && !f.skipped)
-    if (next !== -1) loadFinding(next)
-  }
-  const cancelSkip = () => setSkipConfirm(null)
-
-  const pendingQueue = queue.filter(f => !f.skipped)
-  const skippedQueue = queue.filter(f => f.skipped)
 
   const [authForm, setAuthForm] = useState({
     target: "",
@@ -181,9 +100,14 @@ export default function Remediation() {
         affected_component: prefill.component || prev.affected_component,
         language: prefill.language || prev.language
       }))
+      // Pre-populate the auth form target from topology scan
       if (prefill.component) {
-        const ip = prefill.component.split(":")[0]
-        setAuthForm(prev => ({ ...prev, target: ip, scope: prefill.vulnerability || prev.scope }))
+        const ip = prefill.component.split(':')[0]
+        setAuthForm(prev => ({
+          ...prev,
+          target: ip,
+          scope: prefill.vulnerability || prev.scope
+        }))
       }
     }
   }, [])
@@ -197,7 +121,6 @@ export default function Remediation() {
   const authorize = async () => {
     setLoading(true)
     setError(null)
-    stopPulse()
     try {
       const res = await api.post(`${REM_API}/authorize`, authForm)
       setSession(res.data)
@@ -219,43 +142,11 @@ export default function Remediation() {
       })
       setResult(res.data)
       setStep("results")
-      pushContext({
-        tab: "Remediation",
-        operation: "Patch Generation",
-        summary: `Patch generated for ${vulnForm.language || "unknown"} - ${res.data.test_status || "complete"}. ${res.data.summary || ""}`.trim(),
-        detail: null,
-      })
-      // mark active queue item resolved
-      if (queue.length) {
-        setQueue(prev => prev.map((f, i) => i === activeIdx ? { ...f, resolved: true } : f))
-      }
+      pushContext({ tab: 'Remediation', operation: 'Patch Generation', summary: `Patch generated for ${vulnForm.language || 'unknown'} - ${res.data.test_status || 'complete'}. ${res.data.summary || ''}`.trim(), detail: null })
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
     setLoading(false)
-  }
-
-  const applyPatch = async () => {
-    if (!applyFile.trim()) return
-    setApplying(true)
-    try {
-      const res = await api.post(`${REM_API}/apply`, {
-        session_id: session.session_id,
-        remediation_id: result.remediation_id,
-        target_file: applyFile,
-        backup: true,
-      })
-      setApplyResult(res.data)
-    } catch (e) {
-      setApplyResult({ error: e.response?.data?.detail || e.message })
-    }
-    setApplying(false)
-  }
-
-  const nextFinding = () => {
-    const next = queue.findIndex((f, i) => i > activeIdx && !f.skipped && !f.resolved)
-    if (next !== -1) loadFinding(next)
-    else { setStep("remediate"); setResult(null) }
   }
 
   const reset = () => {
@@ -263,45 +154,31 @@ export default function Remediation() {
     setSession(null)
     setResult(null)
     setError(null)
-    setQueue([])
-    setActiveIdx(0)
     setVulnForm({ vulnerability: "", affected_component: "", language: "python" })
   }
 
-  const allCleared = queue.length > 0 && queue.every(f => f.resolved || f.skipped)
+  const sevColor = { CRITICAL: "var(--danger)", HIGH: "#ff6b35", MEDIUM: "var(--warning)", LOW: "var(--accent-cyan)" }
 
   return (
-    <div className="fade-in" style={{ maxWidth: "900px", margin: "0 auto" }} onClick={stopPulse}>
-
-      {/* ── header ── */}
+    <div className="fade-in" style={{ maxWidth: "900px", margin: "0 auto" }}>
       <div style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
           <Shield size={20} color="var(--accent-gold)" />
-          <h1 ref={tabRef} style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "24px", letterSpacing: "0.2em", color: "var(--text-primary)", margin: 0 }}>
+          <h1 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "24px", letterSpacing: "0.2em", color: "var(--text-primary)", margin: 0 }}>
             REMEDIATION
           </h1>
-          {pulsing && (
-            <span style={{
-              fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "10px",
-              letterSpacing: "0.15em", color: "var(--accent-cyan)",
-              border: "1px solid var(--accent-cyan)", borderRadius: "2px",
-              padding: "2px 8px", animation: "nisaTabPulse 1.4s ease-out infinite",
-            }}>
-              {pendingQueue.length} FINDING{pendingQueue.length !== 1 ? "S" : ""} READY
-            </span>
-          )}
         </div>
         <p style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-dim)", margin: 0 }}>
           Autonomous vulnerability analysis, patch generation, and sandbox testing
         </p>
       </div>
 
-      {/* ── step indicators ── */}
+      {/* Step indicators */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
         {[
           { id: "authorize", label: "01 AUTHORIZE" },
           { id: "remediate", label: "02 ANALYZE" },
-          { id: "results",   label: "03 RESULTS"  },
+          { id: "results", label: "03 RESULTS" }
         ].map(s => (
           <div key={s.id} style={{
             padding: "6px 14px",
@@ -322,120 +199,6 @@ export default function Remediation() {
         </div>
       )}
 
-      {/* ══ FINDING QUEUE PANEL ══════════════════════════════════════════════ */}
-      {queue.length > 0 && (
-        <div style={{ ...panelStyle, borderColor: pulsing ? "var(--accent-cyan)" : "var(--border)", marginBottom: "20px", transition: "border-color 0.3s" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-cyan)" }}>
-              FINDING QUEUE — {pendingQueue.filter(f => !f.resolved).length} PENDING · {skippedQueue.length} SKIPPED · {queue.filter(f => f.resolved).length} RESOLVED
-            </div>
-            {allCleared && (
-              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "10px", color: "var(--success)", letterSpacing: "0.1em" }}>
-                ✓ ALL CLEARED
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {queue.map((f, i) => {
-              const isActive = i === activeIdx && !f.resolved && !f.skipped
-              const color = sevColor[f.severity] || "var(--text-dim)"
-              return (
-                <div
-                  key={f.id}
-                  className="nisa-queue-item"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "8px 10px",
-                    borderRadius: "2px",
-                    border: `1px solid ${isActive ? color : "var(--border)"}`,
-                    background: isActive ? `${color}11` : f.resolved ? "rgba(34,197,94,0.05)" : f.skipped ? "rgba(255,255,255,0.02)" : "var(--bg-primary)",
-                    opacity: f.skipped ? 0.4 : 1,
-                    cursor: !f.resolved && !f.skipped ? "pointer" : "default",
-                    transition: "all 0.2s",
-                  }}
-                  onClick={() => !f.resolved && !f.skipped && loadFinding(i)}
-                >
-                  {/* priority badge */}
-                  <span style={{
-                    fontFamily: "JetBrains Mono, monospace", fontSize: "9px",
-                    color: color, border: `1px solid ${color}`,
-                    padding: "1px 5px", borderRadius: "2px", minWidth: "64px", textAlign: "center",
-                    opacity: f.skipped ? 0.5 : 1,
-                  }}>
-                    {f.severity || "UNKNOWN"}
-                  </span>
-
-                  {/* description */}
-                  <span style={{
-                    flex: 1,
-                    fontFamily: "Outfit, sans-serif",
-                    fontSize: "12px",
-                    color: f.resolved ? "var(--success)" : f.skipped ? "var(--text-dim)" : "var(--text-secondary)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>
-                    {f.vulnerability || "Unnamed finding"}
-                  </span>
-
-                  {/* component */}
-                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--text-dim)", minWidth: "120px", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {f.component || "—"}
-                  </span>
-
-                  {/* status / skip */}
-                  {f.resolved && <CheckCircle size={13} color="var(--success)" style={{ flexShrink: 0 }} />}
-                  {f.skipped && <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: "var(--text-dim)" }}>SKIPPED</span>}
-                  {!f.resolved && !f.skipped && (
-                    <button
-                      title="Skip this finding"
-                      onClick={e => { e.stopPropagation(); requestSkip(i) }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: "2px", display: "flex", alignItems: "center" }}
-                    >
-                      <SkipForward size={13} />
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── skip confirmation modal ── */}
-      {skipConfirm !== null && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: "var(--bg-secondary)", border: "1px solid var(--warning)",
-            borderRadius: "4px", padding: "24px", maxWidth: "380px", width: "90%",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <AlertTriangle size={16} color="var(--warning)" />
-              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "14px", letterSpacing: "0.15em", color: "var(--warning)" }}>
-                SKIP FINDING?
-              </span>
-            </div>
-            <p style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px", lineHeight: 1.6 }}>
-              Are you sure you want to skip <strong style={{ color: "var(--text-primary)" }}>{queue[skipConfirm]?.vulnerability || "this finding"}</strong>? It will be marked as skipped and excluded from the current remediation pass.
-            </p>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={confirmSkip} style={{ ...btnStyle("var(--warning)"), flex: 1, justifyContent: "center" }}>
-                <SkipForward size={12} /> YES, SKIP
-              </button>
-              <button onClick={cancelSkip} style={{ ...btnStyle("var(--text-dim)"), flex: 1, justifyContent: "center" }}>
-                <XCircle size={12} /> CANCEL
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══ AUTHORIZE ════════════════════════════════════════════════════════ */}
       {step === "authorize" && (
         <div style={panelStyle}>
           <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -443,10 +206,10 @@ export default function Remediation() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
             {[
-              { key: "target",             label: "TARGET (IP/DOMAIN)"  },
-              { key: "authorized_by",      label: "AUTHORIZED BY"       },
+              { key: "target", label: "TARGET (IP/DOMAIN)" },
+              { key: "authorized_by", label: "AUTHORIZED BY" },
               { key: "authorization_date", label: "AUTHORIZATION DATE", type: "date" },
-              { key: "engagement_type",    label: "ENGAGEMENT TYPE"     },
+              { key: "engagement_type", label: "ENGAGEMENT TYPE" },
             ].map(f => (
               <div key={f.key}>
                 <label style={labelStyle}>{f.label}</label>
@@ -475,7 +238,6 @@ export default function Remediation() {
         </div>
       )}
 
-      {/* ══ REMEDIATE ════════════════════════════════════════════════════════ */}
       {step === "remediate" && session && (
         <div>
           <div style={{ ...panelStyle, borderColor: "var(--success)" }}>
@@ -491,11 +253,6 @@ export default function Remediation() {
           <div style={panelStyle}>
             <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "16px" }}>
               VULNERABILITY DETAILS
-              {queue.length > 0 && (
-                <span style={{ marginLeft: "10px", fontWeight: 400, fontSize: "10px", color: "var(--text-dim)" }}>
-                  — Finding {activeIdx + 1} of {queue.length}
-                </span>
-              )}
             </div>
             <div style={{ marginBottom: "12px" }}>
               <label style={labelStyle}>VULNERABILITY DESCRIPTION</label>
@@ -539,7 +296,6 @@ export default function Remediation() {
         </div>
       )}
 
-      {/* ══ RESULTS ══════════════════════════════════════════════════════════ */}
       {step === "results" && result && (
         <div>
           <div style={{ ...panelStyle, borderColor: sevColor[result.severity] || "var(--border)" }}>
@@ -574,10 +330,10 @@ export default function Remediation() {
           {result.implementation_steps?.length > 0 && (
             <div style={panelStyle}>
               <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: "var(--accent-gold)", marginBottom: "12px" }}>IMPLEMENTATION STEPS</div>
-              {result.implementation_steps.map((s, i) => (
+              {result.implementation_steps.map((step, i) => (
                 <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
                   <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "10px", color: "var(--accent-gold)", minWidth: "24px" }}>0{i+1}</span>
-                  <span style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-secondary)" }}>{s}</span>
+                  <span style={{ fontFamily: "Outfit, sans-serif", fontSize: "13px", color: "var(--text-secondary)" }}>{step}</span>
                 </div>
               ))}
             </div>
@@ -599,7 +355,9 @@ export default function Remediation() {
               </div>
               <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>TARGET FILE PATH</label>
-                <input value={applyFile} onChange={e => setApplyFile(e.target.value)} placeholder="/path/to/your/login.py" style={inputStyle} />
+                <input value={applyFile} onChange={e => setApplyFile(e.target.value)}
+                  placeholder="/path/to/your/login.py"
+                  style={inputStyle} />
               </div>
               <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
                 A backup will be created automatically before applying the patch.
@@ -617,13 +375,16 @@ export default function Remediation() {
             </div>
           )}
 
+          {/* SSH Remote Patch Panel */}
           <SSHPatchPanel session={session} result={result} />
 
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button onClick={async () => {
               try {
                 const url = `${REM_API}/report/${session.session_id}/${result.remediation_id}`
-                const res = await fetch(url, { headers: { "X-NISA-API-Key": NISA_API_KEY } })
+                const res = await fetch(url, {
+                  headers: { "X-NISA-API-Key": NISA_API_KEY }
+                })
                 if (!res.ok) throw new Error(`HTTP ${res.status}`)
                 const blob = await res.blob()
                 const a = document.createElement("a")
@@ -631,18 +392,12 @@ export default function Remediation() {
                 a.download = `NISA_Remediation_Report_${result.remediation_id}.pdf`
                 a.click()
                 URL.revokeObjectURL(a.href)
-              } catch(e) { alert("PDF download failed: " + e.message) }
+              } catch(e) {
+                alert("PDF download failed: " + e.message)
+              }
             }} style={btnStyle("var(--success)")}>
               <Download size={12} /> DOWNLOAD PDF REPORT
             </button>
-
-            {/* next finding button — only shown when queue has more */}
-            {queue.length > 0 && queue.findIndex((f, i) => i > activeIdx && !f.skipped && !f.resolved) !== -1 && (
-              <button onClick={nextFinding} style={btnStyle("var(--accent-cyan)")}>
-                <ChevronRight size={12} /> NEXT FINDING
-              </button>
-            )}
-
             <button onClick={() => setStep("remediate")} style={btnStyle("var(--accent-cyan)")}>
               <ChevronRight size={12} /> NEW VULNERABILITY
             </button>

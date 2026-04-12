@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { pushContext } from "../SessionContext"
 import { Shield, Radar, Globe, ChevronRight, AlertTriangle, CheckCircle, Info, Activity, Radio, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react"
 import api from "../api"
-import { triggerRemediationPulse } from "./Remediation"
 
 const SEC_API = "http://localhost:8082"
 const IDS_API = "http://localhost:8085"
@@ -29,7 +28,7 @@ export default function Security() {
           { id: "nmap", label: "NMAP SCAN", icon: Radar },
           { id: "zap", label: "ZAP SCAN", icon: Globe },
           { id: "ids", label: "SURICATA IDS", icon: Activity },
-
+          { id: "burp", label: "BURP SUITE", icon: Shield },
           { id: "monitoring", label: "MONITORING", icon: Radio },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
@@ -58,7 +57,7 @@ export default function Security() {
       {activeTab === "nmap" && <NmapPanel />}
       {activeTab === "zap" && <ZapPanel />}
       {activeTab === "ids" && <SuricataPanel />}
-
+      {activeTab === "burp" && <BurpPanel />}
       {activeTab === "monitoring" && <MonitoringPanel />}
     </div>
   )
@@ -84,18 +83,6 @@ function NmapPanel() {
       )
       setResult(scanRes.data)
       const d = scanRes.data
-      if (d.ports?.length > 0) {
-        const highRisk = ["21","22","23","25","110","143","3389","5900"]
-        const findings = d.ports
-          .filter(p => p.service && p.service !== "unknown")
-          .map(p => ({
-            vulnerability: "Exposed service: " + p.service + " on port " + p.port,
-            component: d.target + ":" + p.port,
-            language: "bash",
-            severity: highRisk.includes(String(p.port)) ? "HIGH" : p.port < 1024 ? "MEDIUM" : "LOW",
-          }))
-        if (findings.length) triggerRemediationPulse(findings)
-      }
       pushContext({
         tab: "Security",
         operation: `Nmap ${scanType.toUpperCase()} Scan`,
@@ -218,19 +205,6 @@ function ZapPanel() {
         { target }
       )
       setResult(scanRes.data)
-      const d = scanRes.data
-      if (d.alerts?.length > 0) {
-        const sevMap = { High: "HIGH", Medium: "MEDIUM", Low: "LOW", Informational: "LOW" }
-        const findings = d.alerts
-          .filter(a => a.risk && a.risk !== "Informational")
-          .map(a => ({
-            vulnerability: a.alert || "ZAP Alert",
-            component: a.url || d.target,
-            language: "javascript",
-            severity: sevMap[a.risk] || "MEDIUM",
-          }))
-        if (findings.length) triggerRemediationPulse(findings)
-      }
     } catch (e) {
       setError(e.response?.data?.detail || e.message)
     }
@@ -573,18 +547,6 @@ function SuricataPanel() {
       const r = await api.get(`${IDS_API}/alerts?analyze=${analyze}&limit=20`)
       setAlerts(r.data.alerts || [])
       if (analyze) setAnalysis(r.data.analysis || "")
-      if (analyze && (r.data.alerts || []).length > 0) {
-        const sevMap = { 1: "CRITICAL", 2: "HIGH", 3: "MEDIUM" }
-        const findings = (r.data.alerts || [])
-          .filter(a => a.severity <= 2)
-          .map(a => ({
-            vulnerability: a.signature || "IDS Alert",
-            component: (a.src_ip || "unknown") + " -> " + (a.dest_ip || "unknown"),
-            language: "bash",
-            severity: sevMap[a.severity] || "MEDIUM",
-          }))
-        if (findings.length) triggerRemediationPulse(findings)
-      }
     } catch(e) {}
     if (analyze) setAnalyzing(false)
   }
@@ -642,6 +604,111 @@ function SuricataPanel() {
   )
 }
 
+// ── Burp Suite Panel ─────────────────────────────────────────────
+function BurpPanel() {
+  const [notes, setNotes] = useState("")
+  const [saved, setSaved] = useState(false)
+
+  const launchBurp = () => {
+    api.post("http://localhost:8082/burp/launch").catch(() => {})
+    window.open("x-burp://", "_blank")
+    setTimeout(() => {
+      const cmd = "open -a /Applications/Burp\ Suite\ Community\ Edition.app"
+      api.post("http://localhost:8082/burp/launch", { cmd }).catch(() => {})
+    }, 500)
+  }
+
+  const saveNotes = () => {
+    localStorage.setItem("burp_notes", notes)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  useState(() => {
+    const saved = localStorage.getItem("burp_notes")
+    if (saved) setNotes(saved)
+  }, [])
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "4px", padding: "20px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+            marginBottom: "8px" }}>BURP SUITE COMMUNITY</div>
+          <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "12px",
+            color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "16px" }}>
+            Web application security testing proxy. Intercept, modify, and replay HTTP/S traffic.
+            Manual testing, spider crawling, and vulnerability discovery.
+          </div>
+          <button onClick={launchBurp} style={{
+            padding: "10px 20px", background: "var(--accent-gold-glow)",
+            border: "1px solid var(--accent-gold)", borderRadius: "4px",
+            cursor: "pointer", fontFamily: "Rajdhani, sans-serif",
+            fontWeight: 700, fontSize: "12px", letterSpacing: "0.15em",
+            color: "var(--accent-gold)", width: "100%"
+          }}>LAUNCH BURP SUITE</button>
+        </div>
+
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "4px", padding: "20px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+            marginBottom: "8px" }}>PROXY SETUP</div>
+          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px",
+            color: "var(--text-secondary)", lineHeight: 2 }}>
+            <div>Proxy listener: <span style={{ color: "var(--accent-gold)" }}>127.0.0.1:8080</span></div>
+            <div>Browser proxy: <span style={{ color: "var(--accent-gold)" }}>localhost:8080</span></div>
+            <div>Intercept: <span style={{ color: "var(--accent-gold)" }}>Proxy → Intercept ON</span></div>
+            <div>CA cert: <span style={{ color: "var(--accent-gold)" }}>http://burp/cert</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+        borderRadius: "4px", padding: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+          marginBottom: "12px" }}>
+          <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+            fontSize: "14px", letterSpacing: "0.1em", color: "var(--accent-gold)" }}>
+            FINDINGS NOTES
+          </div>
+          <button onClick={saveNotes} style={{
+            padding: "6px 14px", background: saved ? "var(--success)" : "transparent",
+            border: "1px solid " + (saved ? "var(--success)" : "var(--border)"),
+            borderRadius: "4px", cursor: "pointer",
+            fontFamily: "Rajdhani, sans-serif", fontWeight: 600,
+            fontSize: "11px", letterSpacing: "0.1em",
+            color: saved ? "#000" : "var(--text-dim)"
+          }}>{saved ? "SAVED" : "SAVE NOTES"}</button>
+        </div>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Document Burp Suite findings here...&#10;&#10;Target: &#10;Vulnerabilities found: &#10;Endpoints tested: &#10;Notes: "
+          rows={12} style={{
+            width: "100%", background: "var(--bg-tertiary)",
+            border: "1px solid var(--border)", borderRadius: "4px",
+            padding: "12px", color: "var(--text-primary)",
+            fontFamily: "JetBrains Mono, monospace", fontSize: "12px",
+            outline: "none", resize: "vertical", lineHeight: 1.6
+          }} />
+      </div>
+
+      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)",
+        borderRadius: "4px", padding: "16px" }}>
+        <div style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700,
+          fontSize: "12px", letterSpacing: "0.1em", color: "var(--accent-gold)",
+          marginBottom: "8px" }}>UPGRADE NOTE</div>
+        <div style={{ fontFamily: "Outfit, sans-serif", fontSize: "12px",
+          color: "var(--text-dim)", lineHeight: 1.6 }}>
+          Burp Suite Professional ($449/yr) adds REST API for full NISA integration —
+          automated scanning, finding export, and programmatic control.
+          Community Edition requires manual operation via the GUI.
+        </div>
+      </div>
+    </div>
+  )
+}
 const MON_API = "http://localhost:8099"
 function MonitoringPanel() {
   const [status, setStatus] = useState(null)
@@ -653,7 +720,7 @@ function MonitoringPanel() {
   useEffect(() => { fetchAll() }, [])
   const fetchAll = async () => {
     try { const sr = await api.get(MON_API + "/monitoring/status"); setStatus(sr.data); setConfig(p => ({ ...p, interval_minutes: sr.data.interval_minutes, scan_type: sr.data.scan_type, use_asset_inventory: sr.data.use_asset_inventory })) } catch(e) {}
-    try { const dr = await api.get(MON_API + "/monitoring/deltas"); const dd = dr.data.deltas || []; setDeltas(dd); const sevMap2 = { critical: "CRITICAL", high: "HIGH", medium: "MEDIUM" }; const mf = dd.filter(d => d.severity === "critical" || d.severity === "high").map(d => ({ vulnerability: d.message || d.type || "Monitor Alert", component: d.target || "network", language: "bash", severity: sevMap2[d.severity] || "HIGH" })); if (mf.length) triggerRemediationPulse(mf) } catch(e) {}
+    try { const dr = await api.get(MON_API + "/monitoring/deltas"); setDeltas(dr.data.deltas || []) } catch(e) {}
   }
   const toggle = async () => { setToggling(true); try { if (status && status.enabled) { await api.post(MON_API + "/monitoring/stop") } else { await api.put(MON_API + "/monitoring/config", config); await api.post(MON_API + "/monitoring/start") }; await fetchAll() } catch(e) {}; setToggling(false) }
   const runNow = async () => { setLoading(true); try { await api.put(MON_API + "/monitoring/config", config); await api.post(MON_API + "/monitoring/run_now"); await fetchAll() } catch(e) {}; setLoading(false) }
